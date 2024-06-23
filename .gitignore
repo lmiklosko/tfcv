@@ -1,0 +1,9 @@
+.idea/
+cmake-build*/
+build*/
+samples/
+**/.DS_Store
+
+build.ios.*/
+build.android.*/
+lib/

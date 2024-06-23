@@ -1,0 +1,9 @@
+[submodule "3rdparty/tensorflow"]
+	path = 3rdparty/tensorflow
+	url = https://github.com/tensorflow/tensorflow
+[submodule "3rdparty/opencv"]
+	path = 3rdparty/opencv
+	url = https://github.com/opencv/opencv.git
+[submodule "3rdparty/cxlog"]
+	path = 3rdparty/cxlog
+	url = https://github.com/lmiklosko/cxlog.git

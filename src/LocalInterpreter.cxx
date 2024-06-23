@@ -1,0 +1,275 @@
+#include "tfcv/ml/localinterpreter.hpp"
+#include "tfcv/utility.hpp"
+#include "cxlog/GLog.hpp"
+
+#include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/kernels/register.h"
+#include "tensorflow/lite/model.h"
+#include "tensorflow/lite/minimal_logging.h"
+#include "tensorflow/lite/delegates/gpu/delegate.h"
+#include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
+#include "tensorflow/lite/delegates/coreml/coreml_delegate.h"
+
+#include "opencv2/imgproc.hpp"
+
+#include <thread>
+#include <sstream>
+#include <variant>
+
+using namespace ml;
+
+class LocalInterpreter::impl
+{
+    std::unique_ptr<tflite::FlatBufferModel> _model;
+    std::unique_ptr<tflite::Interpreter> _interpreter;
+    std::unique_ptr<TfLiteDelegate, void(*)(TfLiteDelegate*)> _delegate;
+
+    std::shared_ptr<ILogger> _logger;
+
+public:
+    explicit impl(std::string_view model_path)
+        : _model(tflite::FlatBufferModel::BuildFromFile(model_path.data()))
+        , _delegate(nullptr, nullptr)
+        , _logger(gLogFactory->CreateLogger("TFInterpreter"))
+    {
+        build_interpreter();
+    }
+
+    explicit impl(std::span<const std::byte> model_data)
+        : _model(tflite::FlatBufferModel::BuildFromBuffer(reinterpret_cast<const char*>(model_data.data()), model_data.size()))
+        , _delegate(nullptr, nullptr)
+        , _logger(gLogFactory->CreateLogger("TFInterpreter"))
+    {
+        build_interpreter();
+    }
+
+    [[nodiscard]] std::span<int> input_dims() const noexcept
+    {
+        return {
+            _interpreter->input_tensor(0)->dims->data,
+            static_cast<unsigned long>(_interpreter->input_tensor(0)->dims->size)
+        };
+    }
+
+    [[nodiscard]] std::span<int> output_dims() const noexcept
+    {
+        return {
+            _interpreter->output_tensor(0)->dims->data,
+            static_cast<unsigned long>(_interpreter->output_tensor(0)->dims->size)
+        };
+    }
+
+    [[nodiscard]] std::span<const std::byte> run(std::span<const Image> input) const
+    {
+        if (input.empty())
+        {
+            throw std::invalid_argument("TFInterpreter::impl::run(): Input data is empty");
+        }
+
+        auto dur_copy = utility::measure_time([&]{ copy_data(input); });
+        auto dur_invoke = utility::measure_time([&]{
+            if (kTfLiteOk != _interpreter->Invoke())
+            {
+                throw std::runtime_error("TFInterpreter::impl::run(): Failed to invoke interpreter");
+            }
+        });
+
+        _logger->Log(LogLevel::Info, "Inference time", std::map<std::string, std::string>{
+            std::make_pair("Copy", std::to_string(dur_copy.count())),
+            std::make_pair("Invoke", std::to_string(dur_invoke.count()))
+        });
+
+        return {
+            reinterpret_cast<const std::byte*>(_interpreter->output_tensor(0)->data.raw_const),
+            _interpreter->output_tensor(0)->bytes
+        };
+    }
+
+private:
+    void build_interpreter()
+    {
+        tflite::LoggerOptions::SetMinimumLogSeverity(tflite::LogSeverity::TFLITE_LOG_SILENT);
+
+        if (!_model)
+        {
+            throw std::runtime_error("TFInterpreter::impl::build_interpreter(): Model could not be found!");
+        }
+
+        tflite::ops::builtin::BuiltinOpResolver resolver;
+        tflite::InterpreterBuilder(*_model, resolver)(&_interpreter);
+        if (!_interpreter)
+        {
+            throw std::runtime_error("TFInterpreter::impl::build_interpreter(): Failed to build the interpreter");
+        }
+
+        add_delegates();
+
+        if (_interpreter->input_tensor(0)->dims->size != 4 ||
+            (_interpreter->input_tensor(0)->dims->data[3] != 3 && _interpreter->input_tensor(0)->dims->data[3] != 1) ||
+            (_interpreter->input_tensor(0)->type != kTfLiteFloat32 && _interpreter->input_tensor(0)->type != kTfLiteUInt8))
+        {
+            throw std::runtime_error("TFInterpreter::impl::build_interpreter(): Unsupported input tensor format");
+        }
+
+        // ================= Specs =================
+        _logger->Log(LogLevel::Info, "TF model loaded", std::map<std::string, std::string>{
+                std::make_pair("Input", tf_info(_interpreter->input_tensor(0))),
+                std::make_pair("Output", tf_info(_interpreter->output_tensor(0)))
+        });
+    }
+
+    void copy_data(std::span<const Image> span) const
+    {
+        auto [width, height, channels] = std::make_tuple(_interpreter->input_tensor(0)->dims->data[1], _interpreter->input_tensor(0)->dims->data[2], _interpreter->input_tensor(0)->dims->data[3]);
+        if (_interpreter->input_tensor(0)->dims->data[0] < (int)span.size())
+        {
+            _logger->Logc(LogLevel::Debug, "Resizing input tensor to ", cv::Scalar_<int>((int)span.size(), width, height, channels));
+
+            if (kTfLiteOk != _interpreter->ResizeInputTensor(0, { (int)span.size(), width, height, channels }))
+            {
+                _logger->Log(LogLevel::Error, "Failed to resize input tensor");
+                throw std::runtime_error("TFInterpreter::impl::copy_data(): Failed to resize input tensor");
+            }
+
+            if (kTfLiteOk != _interpreter->AllocateTensors())
+            {
+                _logger->Log(LogLevel::Error, "Failed to allocate tensors");
+                throw std::runtime_error("TFInterpreter::impl::copy_data(): Failed to allocate tensors");
+            }
+        }
+
+        void *ptr = _interpreter->input_tensor(0)->data.raw;
+        for (auto& orig : span)
+        {
+            orig
+                .resize(512, 512)
+                .copyTo(
+                    ptr,
+                    _interpreter->input_tensor(0)->type == kTfLiteFloat32,
+                    channels != 3
+            );
+        }
+    }
+
+    void add_delegates()
+    {
+        _interpreter->SetNumThreads((int)std::thread::hardware_concurrency());
+
+        /* Core ML Delegate will run under iOS only (iPhone/iPad) */
+#ifdef __APPLE__
+        #include <TargetConditionals.h>
+ #if TARGET_OS_IPHONE
+        TfLiteCoreMlDelegateOptions coremlOptions;
+        coremlOptions.enabled_devices = TfLiteCoreMlDelegateEnabledDevices::TfLiteCoreMlDelegateDevicesWithNeuralEngine;
+
+        auto coremlDelegate = TfLiteCoreMlDelegateCreate(&coremlOptions);
+        if (coremlDelegate)
+        {
+            if (_interpreter->ModifyGraphWithDelegate(coremlDelegate) == kTfLiteOk)
+            {
+                _logger->Log(LogLevel::Info, "Using CoreML delegate");
+                _delegate = { coremlDelegate, TfLiteCoreMlDelegateDelete };
+                return;
+            }
+            else
+            {
+                TfLiteCoreMlDelegateDelete(coremlDelegate);
+            }
+        }
+ #endif
+#endif
+
+        /* Try NNAPI delegate. It should be available beginning api level 26+, however TF recommends min 27 */
+#ifdef __ANDROID__
+        auto nnapiDelegate = tflite::NnApiDelegate();
+        if (_interpreter->ModifyGraphWithDelegate(nnapiDelegate) == kTfLiteOk)
+        {
+            _logger->Log(LogLevel::Info, "Using NNAPI delegate");
+            return;
+        }
+#endif
+
+        /* Every platform supports GPU delegate based on the OpenCL availability (might do nothing) */
+        /* NOTE: GPU delegate has an issue with missing dependencies / sources (see https://github.com/tensorflow/tensorflow/issues/61312)
+         * needs to be re-enabled once https://github.com/tensorflow/tensorflow/pull/61381 is merged */
+#if !defined(__APPLE__) /* REMOVE CODE AFTER THIS COMMENT BASED ON THE ABOVE */ && !defined(__ANDROID__)
+        auto gpuOptions = TfLiteGpuDelegateOptionsV2Default();
+        auto gpuDelegate = TfLiteGpuDelegateV2Create(&gpuOptions);
+        if (gpuDelegate)
+        {
+            if (auto rv = _interpreter->ModifyGraphWithDelegate(gpuDelegate); rv == kTfLiteOk)
+            {
+                _logger->Log(LogLevel::Info, "Using GPU delegate");
+                _delegate = { gpuDelegate, TfLiteGpuDelegateV2Delete };
+                return;
+            }
+            else
+            {
+                _logger->Logf(LogLevel::Warning, "Failed to use GPU delegate, error code: %d", rv);
+                TfLiteGpuDelegateV2Delete(gpuDelegate);
+            }
+        }
+#endif
+    }
+
+    static std::string tf_info(TfLiteTensor* tensor) noexcept
+    {
+        std::ostringstream ss;
+        ss << "[" << tensor->dims->data[0];
+        for (int i = 1; i < tensor->dims->size; ++i)
+            ss << ", " << tensor->dims->data[i];
+        ss << "] " << TfLiteTypeGetName(tensor->type);
+        return ss.str();
+    }
+
+    static bool is_valid(const cv::Mat& mat) noexcept
+    {
+        return !mat.empty() && mat.channels() == 3 && (mat.type() & CV_MAT_DEPTH_MASK) == CV_8U;
+    }
+
+
+    template<typename T>
+    static inline void assign(std::variant<float*, uint8_t*>& ptr, T value) noexcept
+    {
+        if (std::holds_alternative<float*>(ptr))
+        {
+            if constexpr (std::is_same_v<T, float>)
+                *std::get<float*>(ptr)++ = value;
+            else
+                *std::get<float*>(ptr)++ = value / 255.0;
+        }
+        else
+        {
+            *std::get<uint8_t*>(ptr)++ = static_cast<uint8_t>(value);
+        }
+    }
+};
+
+// ================= TF::Interpreter =================
+
+LocalInterpreter::LocalInterpreter(std::string_view model_path)
+    : pImpl(std::make_unique<impl>(model_path))
+{
+}
+
+LocalInterpreter::LocalInterpreter(std::span<const std::byte> model_data)
+    : pImpl(std::make_unique<impl>(model_data))
+{
+}
+
+std::span<const std::byte> LocalInterpreter::run(std::span<const Image> input) const
+{
+    return pImpl->run(input);
+}
+
+std::span<int> LocalInterpreter::input_dims() const noexcept
+{
+    return pImpl->input_dims();
+}
+
+std::span<int> LocalInterpreter::output_dims() const noexcept
+{
+    return pImpl->output_dims();
+}
+
+LocalInterpreter::~LocalInterpreter() = default;
