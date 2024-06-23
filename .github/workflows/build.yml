@@ -22,4 +22,6 @@ jobs:
     - name: Build
       if: matrix.os == 'macos-latest'
       run: |
-          bin/build-ios.sh
+        cd 3rdparty/tensorflow && git apply ../../fix.patch
+        cd ${{ github.workspace }}
+        bin/build-ios.sh

@@ -1,0 +1,13 @@
+diff --git a/tensorflow/lite/profiling/platform_profiler.cc b/tensorflow/lite/profiling/platform_profiler.cc
+index acaef4b17a6..7b43aaee5bd 100644
+--- a/tensorflow/lite/profiling/platform_profiler.cc
++++ b/tensorflow/lite/profiling/platform_profiler.cc
+@@ -23,7 +23,7 @@ limitations under the License.
+ #elif defined(__APPLE__)
+ #include "TargetConditionals.h"
+ #if TARGET_OS_IOS
+-#define SIGNPOST_PLATFORM_PROFILER
++//#define SIGNPOST_PLATFORM_PROFILER
+ #include "tensorflow/lite/profiling/signpost_profiler.h"
+ #endif
+ #elif defined(ENABLE_TFLITE_PERFETTO_PROFILER)

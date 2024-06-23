@@ -21,7 +21,6 @@ for arch in "${platforms[@]}"; do
         -B"build.android.$arch" \
         -DDCMAKE_INSTALL_PATH="lib/android/jniLibs/$arch" \
         $(test "$arch" = "armeabi-v7a" && echo "-DTFLITE_ENABLE_XNNPACK=OFF") \
-        -G Ninja \
         .
 
   cmake --build "build.android.$arch" --target tfcv --config Release -j 22
