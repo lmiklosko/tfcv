@@ -40,6 +40,8 @@ if (NOT IOS)
           -Wl,--strip-all
   )
   set (${PROJECT_NAME}_LIBRARY_TYPE SHARED)
+else()
+  set (${PROJECT_NAME}_LIBRARY_TYPE STATIC)
 endif()
 
 # Dependencies

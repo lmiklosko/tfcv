@@ -1,0 +1,25 @@
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+
+    - name: Build
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        bin/build-android.sh
+
+    - name: Build
+      if: matrix.os == 'macos-latest'
+      run: |
+          bin/build-ios.sh

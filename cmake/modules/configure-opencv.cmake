@@ -80,7 +80,6 @@ if (CMAKE_BUILD_TYPE STREQUAL Debug AND NOT CMAKE_SYSTEM_NAME STREQUAL "Android"
     set (WITH_GTK_2_X ON)
   endif()
   set (BUILD_opencv_highgui ON)
-  set (BUILD_opencv_videoio ON)
 endif()
 
 
