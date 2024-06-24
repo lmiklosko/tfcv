@@ -151,6 +151,14 @@ private:
         }
     }
 
+    /**
+     * Modifies graph with available delegates
+     *
+     * @details
+     * For Android, NNAPI delegate is used if available, otherwise GPU delegate is used
+     * For iOS, CoreML delegate is used
+     * For other platforms, GPU delegate is used
+     */
     void add_delegates()
     {
         _interpreter->SetNumThreads((int)std::thread::hardware_concurrency());
@@ -177,6 +185,7 @@ private:
             }
         }
  #endif
+        // TODO: Add Metal delegate
 #endif
 
         /* Try NNAPI delegate. It should be available beginning api level 26+, however TF recommends min 27 */
@@ -220,28 +229,6 @@ private:
             ss << ", " << tensor->dims->data[i];
         ss << "] " << TfLiteTypeGetName(tensor->type);
         return ss.str();
-    }
-
-    static bool is_valid(const cv::Mat& mat) noexcept
-    {
-        return !mat.empty() && mat.channels() == 3 && (mat.type() & CV_MAT_DEPTH_MASK) == CV_8U;
-    }
-
-
-    template<typename T>
-    static inline void assign(std::variant<float*, uint8_t*>& ptr, T value) noexcept
-    {
-        if (std::holds_alternative<float*>(ptr))
-        {
-            if constexpr (std::is_same_v<T, float>)
-                *std::get<float*>(ptr)++ = value;
-            else
-                *std::get<float*>(ptr)++ = value / 255.0;
-        }
-        else
-        {
-            *std::get<uint8_t*>(ptr)++ = static_cast<uint8_t>(value);
-        }
     }
 };
 

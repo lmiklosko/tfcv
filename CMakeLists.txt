@@ -4,9 +4,9 @@ cmake_policy(SET CMP0065 NEW)
 # Project settings
 # ====================================================
 project (tfcv
-        VERSION 1.3.2
+        VERSION 0.1.0
         DESCRIPTION "Pre-compiled tensorflow lite for computer vision"
-        HOMEPAGE_URL "digitalsoftminds.eu"
+        HOMEPAGE_URL "https://github.com/lmiklosko/tfcv"
 )
 
 option (BUILD_TESTAPPS "Enable test application" OFF)
@@ -34,6 +34,7 @@ if (NOT IOS)
           $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-enum-enum-conversion>
           $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-enum-float-conversion>
           $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>
+          $<$<COMPILE_LANGUAGE:CXX>:-Wno-gnu-inline-cpp-without-extern>
   )
   add_link_options(
           -Wl,--gc-sections

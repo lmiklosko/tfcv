@@ -25,3 +25,9 @@ jobs:
         cd 3rdparty/tensorflow && git apply ../../fix.patch
         cd ${{ github.workspace }}
         bin/build-ios.sh
+
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}-${{ github.run_number }}
+        path: lib/

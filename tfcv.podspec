@@ -1,9 +1,9 @@
 Pod::Spec.new do |spec|
-  spec.name         = "@CMAKE_PROJECT_NAME@"
-  spec.version      = "@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@"
-  spec.summary      = "@PROJECT_DESCRIPTION@"
-  spec.description  = "@PROJECT_DESCRIPTION@"
-  spec.homepage     = "@PROJECT_HOMEPAGE_URL@"
+  spec.name         = "tfcv"
+  spec.version      = "0.1.0"
+  spec.summary      = "Pre-compiled tensorflow lite for computer vision"
+  spec.description  = "Pre-compiled tensorflow lite for computer vision"
+  spec.homepage     = "https://github.com/lmiklosko/tfcv.git"
 
   spec.static_framework = true
   spec.dependency 'TensorFlowLiteObjC/CoreML'
