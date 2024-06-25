@@ -201,7 +201,7 @@ private:
         /* Every platform supports GPU delegate based on the OpenCL availability (might do nothing) */
         /* NOTE: GPU delegate has an issue with missing dependencies / sources (see https://github.com/tensorflow/tensorflow/issues/61312)
          * needs to be re-enabled once https://github.com/tensorflow/tensorflow/pull/61381 is merged */
-#if !defined(__APPLE__) /* REMOVE CODE AFTER THIS COMMENT BASED ON THE ABOVE */ && !defined(__ANDROID__)
+#if !defined(__APPLE__) ///* REMOVE CODE AFTER THIS COMMENT BASED ON THE ABOVE */ && !defined(__ANDROID__)
         auto gpuOptions = TfLiteGpuDelegateOptionsV2Default();
         auto gpuDelegate = TfLiteGpuDelegateV2Create(&gpuOptions);
         if (gpuDelegate)

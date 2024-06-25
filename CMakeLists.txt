@@ -81,11 +81,14 @@ target_include_directories (${PROJECT_NAME}
 )
 target_link_libraries (${PROJECT_NAME}
         PUBLIC
+          cxlog
           opencv_core
           opencv_imgproc
           opencv_imgcodecs
           tensorflow-lite
-          cxlog
+          $<$<BOOL:${ANDROID}>:GLESv3>
+          $<$<BOOL:${ANDROID}>:EGL>
+          $<$<BOOL:${ANDROID}>:android>
 )
 install (TARGETS ${PROJECT_NAME}
         FILE_SET HEADERS
