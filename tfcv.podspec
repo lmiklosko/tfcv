@@ -3,7 +3,7 @@ Pod::Spec.new do |spec|
   spec.version      = "0.1.0"
   spec.summary      = "Pre-compiled tensorflow lite for computer vision"
   spec.description  = "Pre-compiled tensorflow lite for computer vision"
-  spec.homepage     = "https://github.com/lmiklosko/tfcv.git"
+  spec.homepage     = "https://github.com/lmiklosko/tfcv"
 
   spec.static_framework = true
   spec.dependency 'TensorFlowLiteObjC/CoreML'
@@ -26,5 +26,5 @@ Pod::Spec.new do |spec|
         'CLANG_CXX_LANGUAGE_STANDARD' => 'c++20',
         'CLANG_CXX_LIBRARY' => 'libc++'
   }
-  spec.prepare_command  = "sh bin/build-ios.sh"
+  spec.prepare_command  = "sh bin/get-ios.sh"
 end
