@@ -36,7 +36,7 @@ jobs:
                 $(test "${{ matrix.arch }}" = "armeabi-v7a" && echo "-DTFLITE_ENABLE_XNNPACK=OFF") \
                 .
           
-          cmake --build build --target tfcv --config Release -j 2
+          cmake --build build --target tfcv --config Release -j4
           
           mkdir -p out/lib/android/jniLibs/${{ matrix.arch }}
           cp build/lib/libtfcv.so out/lib/android/jniLibs/${{ matrix.arch }}
@@ -69,7 +69,7 @@ jobs:
       - name: Build
         run: |
           cmake -DCMAKE_TOOLCHAIN_FILE=./cmake/modules/iOS.cmake -DIOS_PLATFORM=${{ matrix.platform }} -DIOS_DEPLOYMENT_TARGET=${{ env.ios-version }} -H. -Bbuild -GXcode
-          cmake --build build --config Release -j2
+          cmake --build build --config Release -j3
 
       - name: Upload
         id: upload
@@ -108,7 +108,7 @@ jobs:
 
       - run: |
           mkdir -p build/include
-          cp -r include build/include
+          cp -r include build/
 
       - name: Upload
         uses: actions/upload-artifact@v4
