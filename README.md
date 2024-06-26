@@ -25,7 +25,9 @@ For iOS, static library is provided alongside headers. It exports all TensorFlow
 and imgcodecs with PNG, JPEG support). Simply adding a podspec dependency should work. Optionally you can copy the library
 and import it in your project.
 
-## My codebase is using the interpreter API, but I would like to use custom interpreter code. How can I do that?
+## FAQ
+### My codebase is using the interpreter API, but I would like to use custom interpreter code. How can I do that?
 `ml::Processor::create()` is exported as a weak symbol in the library. You can override this symbol in your codebase
 to supplement your custom interpreter code. This is particularly useful if you want to use Google Play Services ML Kit.
+
 
