@@ -3,6 +3,7 @@ on:
     branches:
       - master
       - develop
+      - release/*
 
 env:
   ios-version: 13.0
@@ -107,8 +108,8 @@ jobs:
           libtool -static -o build/lib/ios/libtfcv.a intermediate/lib/**/*.a
 
       - run: |
-          mkdir -p build/include
           cp -r include build/
+          cp -r 3rdparty/opencv/modules/{core,imgproc,imgcodecs,highgui}/include/opencv2/* build/include/opencv2/
 
       - name: Upload
         uses: actions/upload-artifact@v4
