@@ -26,5 +26,5 @@ Pod::Spec.new do |spec|
         'CLANG_CXX_LANGUAGE_STANDARD' => 'c++20',
         'CLANG_CXX_LIBRARY' => 'libc++'
   }
-  spec.prepare_command  = "sh bin/build-ios.sh"
+  spec.prepare_command  = "sh bin/get-ios.sh"
 end
