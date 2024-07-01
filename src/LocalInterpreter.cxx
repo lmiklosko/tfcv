@@ -210,13 +210,13 @@ private:
         {
             if (auto rv = _interpreter->ModifyGraphWithDelegate(gpuDelegate); rv == kTfLiteOk)
             {
-                _logger->Log(LogLevel::Info, "Using GPU delegate");
+                _logger->LogInfo("Using GPU delegate");
                 _delegate = { gpuDelegate, TfLiteGpuDelegateV2Delete };
                 return;
             }
             else
             {
-                _logger->Logf(LogLevel::Warning, "Failed to use GPU delegate, error code: %d", rv);
+                _logger->LogWarning("Failed to use GPU delegate, error code: {}", rv);
                 TfLiteGpuDelegateV2Delete(gpuDelegate);
             }
         }

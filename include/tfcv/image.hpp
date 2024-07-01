@@ -32,6 +32,13 @@ public:
      */
     void crop(std::span<const cv::Point2f, 4> rect);
 
+    /**
+     * Resizes the image to the specified dimensions.
+     *
+     * @param width
+     * @param height
+     */
+    [[nodiscard]]
     Image resize(int width, int height) const;
 
     /**
@@ -43,7 +50,13 @@ public:
     [[nodiscard]]
     Image depthwiseContour(std::initializer_list<int> ignore_channels = {}) const;
 
-
+    /**
+     * Copies the image data to a buffer.
+     *
+     * @param ptr Buffer to copy to
+     * @param normalized Whether to normalize the data
+     * @param grayscale Whether to convert the image to grayscale
+     */
     void copyTo(void*& ptr, bool normalized, bool grayscale) const;
 
     /**
@@ -64,4 +77,6 @@ public:
 
 private:
     cv::Mat mat;
+
+    static void __check(const cv::Mat& mat);
 };

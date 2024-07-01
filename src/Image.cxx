@@ -4,9 +4,22 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
+
+/* static */ void Image::__check(const cv::Mat& mat)
+{
+    if (mat.empty())
+    {
+        throw std::invalid_argument("Image::__check(): Image is empty");
+    }
+}
+
+
+
 Image::Image(cv::Mat&& image)
         : mat(std::move(image))
 {
+    __check(mat);
+
     if ((mat.type() & CV_MAT_DEPTH_MASK) != CV_8U)
     {
         mat.convertTo(mat, CV_8U, 255.0);
@@ -16,11 +29,13 @@ Image::Image(cv::Mat&& image)
 Image::Image(std::span<const std::byte> data) // NOLINT(*-explicit-constructor)
         : mat(cv::imdecode(cv::Mat(1, (int)data.size(), CV_8UC1, (void*)data.data()), cv::IMREAD_UNCHANGED))
 {
+    __check(mat);
 }
 
 Image::Image(const std::filesystem::path& imagePath) // NOLINT(*-explicit-constructor)
         : mat(cv::imread(imagePath.string(), cv::IMREAD_UNCHANGED))
 {
+    __check(mat);
 }
 
 Image Image::depthwiseContour(std::initializer_list<int> ignore_channels) const
@@ -156,4 +171,3 @@ std::vector<uint8_t> Image::encode(std::string_view format) const
 int Image::width() const { return mat.cols; }
 int Image::height() const { return mat.rows; }
 int Image::channels() const { return mat.channels(); }
-
