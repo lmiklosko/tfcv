@@ -12,17 +12,17 @@ Pod::Spec.new do |spec|
   spec.authors      = { "Lukas Miklosko" => "l.miklosko@gmail.com" }
 
   spec.platform     = :ios, "13.0"
-  spec.source       = { :git => "https://github.com/lmiklosko/tfcv.git" }
+  spec.source       = { :git => "https://github.com/lmiklosko/tfcv" }
 
-  spec.source_files         = "platform/ios/public/"
-  spec.public_header_files  = "platform/ios/public/*.h"
+  spec.source_files         = "platform/ios/public/**/*.{h,m,mm}"
+  spec.public_header_files  = "platform/ios/public/**/*.h", "include/**/*.{h,hpp}"
 
   spec.library              = "c++"
   spec.vendored_libraries   = 'lib/ios/libtfcv.a'
 
   # ――― Project Settings ――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
   spec.xcconfig             = {
-        "HEADER_SEARCH_PATHS" => "/#{spec.name}/**",
+        "HEADER_SEARCH_PATHS" => "$(PODS_TARGET_SRCROOT)/include $(PODS_TARGET_SRCROOT)/platform/ios/public",
         'CLANG_CXX_LANGUAGE_STANDARD' => 'c++20',
         'CLANG_CXX_LIBRARY' => 'libc++'
   }
