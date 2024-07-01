@@ -17,6 +17,7 @@
 #include <variant>
 
 using namespace ml;
+using namespace cxlog;
 
 class LocalInterpreter::impl
 {
@@ -74,10 +75,10 @@ public:
             }
         });
 
-        _logger->Log(LogLevel::Info, "Inference time", std::map<std::string, std::string>{
-            std::make_pair("Copy", std::to_string(dur_copy.count())),
-            std::make_pair("Invoke", std::to_string(dur_invoke.count()))
-        });
+        _logger->Log(LogLevel::Info, "Inference time - copy: {}, invoke: {}",
+            dur_copy.count(),
+            dur_invoke.count()
+        );
 
         return {
             reinterpret_cast<const std::byte*>(_interpreter->output_tensor(0)->data.raw_const),
@@ -112,10 +113,10 @@ private:
         }
 
         // ================= Specs =================
-        _logger->Log(LogLevel::Info, "TF model loaded", std::map<std::string, std::string>{
-                std::make_pair("Input", tf_info(_interpreter->input_tensor(0))),
-                std::make_pair("Output", tf_info(_interpreter->output_tensor(0)))
-        });
+        _logger->Log(LogLevel::Info, "TF model loaded\n\tInput: {}\n\tOutput: {}",
+            tf_info(_interpreter->input_tensor(0)),
+            tf_info(_interpreter->output_tensor(0))
+        );
     }
 
     void copy_data(std::span<const Image> span) const
@@ -123,7 +124,8 @@ private:
         auto [width, height, channels] = std::make_tuple(_interpreter->input_tensor(0)->dims->data[1], _interpreter->input_tensor(0)->dims->data[2], _interpreter->input_tensor(0)->dims->data[3]);
         if (_interpreter->input_tensor(0)->dims->data[0] < (int)span.size())
         {
-            _logger->Logc(LogLevel::Debug, "Resizing input tensor to ", cv::Scalar_<int>((int)span.size(), width, height, channels));
+            _logger->Log(LogLevel::Debug, "Resizing input tensor to [{}, {}, {}, {}]",
+                         (int)span.size(), width, height, channels);
 
             if (kTfLiteOk != _interpreter->ResizeInputTensor(0, { (int)span.size(), width, height, channels }))
             {

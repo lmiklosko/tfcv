@@ -24,7 +24,7 @@ list (APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/)
 
 # iOS cannot use shared library since we would need to compile this with certificate and provisioning profile
 # which is not possible in this context. Build as static library instead with all symbols visible (default behavior).
-if (NOT IOS)
+if (NOT APPLE)
   add_compile_options(
           -fPIC
           -ffunction-sections
