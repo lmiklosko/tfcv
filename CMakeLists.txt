@@ -24,7 +24,7 @@ list (APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/)
 
 # iOS cannot use shared library since we would need to compile this with certificate and provisioning profile
 # which is not possible in this context. Build as static library instead with all symbols visible (default behavior).
-if (NOT APPLE)
+if (NOT APPLE AND NOT IOS)
   add_compile_options(
           -fPIC
           -ffunction-sections
@@ -50,6 +50,10 @@ endif()
 include (configure-opencv)
 add_subdirectory (3rdparty/cxlog)
 add_subdirectory (3rdparty/opencv)
+
+# TENSORFLOW needs to be built statically
+unset(BUILD_SHARED_LIBS CACHE)
+set(BUILD_SHARED_LIBS OFF)
 add_subdirectory (3rdparty/tensorflow/tensorflow/lite EXCLUDE_FROM_ALL)
 
 # Library definition
@@ -92,11 +96,13 @@ target_link_libraries (${PROJECT_NAME}
 )
 install (TARGETS ${PROJECT_NAME}
         FILE_SET HEADERS
+        DESTINATION include/${PROJECT_NAME}${PROJECT_VERSION_MAJOR}
+        INCLUDES DESTINATION include/${PROJECT_NAME}${PROJECT_VERSION_MAJOR}
 )
 
-# Configure PODSPEC file
-# ====================================================
-configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/ios.podspec
-        ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.podspec
-)
+
+
+if (BUILD_TESTAPPS)
+  add_executable(testapp src/testapp.cxx)
+  target_link_libraries(testapp ${PROJECT_NAME} opencv_highgui)
+endif (BUILD_TESTAPPS)

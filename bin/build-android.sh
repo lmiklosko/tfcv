@@ -19,7 +19,8 @@ for arch in "${platforms[@]}"; do
         -DANDROID_ABI="$arch" \
         -DANDROID_PLATFORM=android-26 \
         -B"build.android.$arch" \
-        -DDCMAKE_INSTALL_PATH="lib/android/jniLibs/$arch" \
+        -DCMAKE_INSTALL_PATH="lib/android/jniLibs/$arch" \
+        -DBUILD_SHARED_LIBS=ON \
         $(test "$arch" = "armeabi-v7a" && echo "-DTFLITE_ENABLE_XNNPACK=OFF") \
         .
 

@@ -3,8 +3,8 @@
 
 #include <string_view>
 
-namespace ml
-{
+TFCV_NAMESPACE_WITH_BEGIN(ml)
+
     class API LocalInterpreter : public IProcessor
     {
     public:
@@ -51,4 +51,5 @@ namespace ml
         class LOCAL impl;
         std::unique_ptr<impl> pImpl;
     };
-}
+
+TFCV_NAMESPACE_END

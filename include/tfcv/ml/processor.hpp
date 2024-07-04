@@ -6,8 +6,8 @@
 #include <vector>
 #include <cstdint>
 
-namespace ml
-{
+TFCV_NAMESPACE_WITH_BEGIN(ml)
+
     class API IProcessor
     {
     public:
@@ -53,4 +53,5 @@ namespace ml
          */
         static std::unique_ptr<IProcessor> create(std::span<const std::byte> model_data) OVERRIDABLE;
     };
-}
+
+TFCV_NAMESPACE_END

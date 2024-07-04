@@ -5,8 +5,8 @@
 #include <type_traits>
 #include <span>
 
-namespace utility
-{
+TFCV_NAMESPACE_WITH_BEGIN(utility)
+
     template<typename Period = std::chrono::milliseconds, typename Callable>
     Period measure_time(Callable&& callable) noexcept(std::is_nothrow_invocable_v<Callable>)
     {
@@ -27,4 +27,11 @@ namespace utility
         }
         return out;
     }
-}
+
+    template<typename T, typename... Args>
+    typename std::vector<T>::size_type argmax(const T& range, Args&&... args)
+    {
+        return std::distance(range.begin(), std::max_element(range.begin(), range.end(), std::forward<Args>(args)...));
+    }
+
+TFCV_NAMESPACE_END

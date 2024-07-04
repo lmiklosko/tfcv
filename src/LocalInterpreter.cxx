@@ -10,13 +10,10 @@
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
 #include "tensorflow/lite/delegates/coreml/coreml_delegate.h"
 
-#include "opencv2/imgproc.hpp"
-
 #include <thread>
 #include <sstream>
-#include <variant>
 
-using namespace ml;
+using namespace tfcv::ml;
 using namespace cxlog;
 
 class LocalInterpreter::impl
