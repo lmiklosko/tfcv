@@ -80,6 +80,9 @@ jobs:
           
           cmake --build build --config Release -j3
           cmake --install build --prefix out
+          
+          # Make sure libtfcv.a contains all its dependencies
+          libtool -static -o out/lib/libtfcv.a $(find build/ -name '*.a')
 
       - name: Upload
         id: upload
@@ -106,9 +109,11 @@ jobs:
 
       - name: Merge iOS Os & Simulator libraries
         run: |
-          mkdir -p build/lib/ios
-          libtool -static -o build/lib/libtfcv.a intermediate/lib/**/*.a
+          mkdir -p build/lib/
           cp -r intermediate/lib/iOS-OS/include build/include
+          for fn in $(ls -a intermediate/lib/iOS-OS/lib | grep "\.a"); do 
+            lipo -create intermediate/lib/iOS-OS/lib/$fn intermediate/lib/iOS-SIMULATOR/lib/$fn -output build/lib/$fn
+          done
 
       - name: Upload
         uses: actions/upload-artifact@v4
