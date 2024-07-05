@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Try to download artifact from GitHub
-wget -O release.zip https://github.com/lmiklosko/tfcv/releases/download/v1.0.1/Multiplatform.zip
+wget -O release.zip https://github.com/lmiklosko/tfcv/releases/download/v1.1.3/iOS-Multitarget.zip
 
 # If failed to do so, build from source
 if [ $? -eq 0 ]; then

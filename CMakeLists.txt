@@ -4,7 +4,7 @@ cmake_policy(SET CMP0065 NEW)
 # Project settings
 # ====================================================
 project (tfcv
-        VERSION 1.0.1
+        VERSION 1.1.3
         DESCRIPTION "Pre-compiled tensorflow lite for computer vision"
         HOMEPAGE_URL "https://github.com/lmiklosko/tfcv"
 )
@@ -71,10 +71,10 @@ target_sources (${PROJECT_NAME}
         FILES
           include/tfcv/ml/localinterpreter.hpp
           include/tfcv/ml/processor.hpp
+          include/tfcv/ml/classifier.hpp
           include/tfcv/defs.hpp
           include/tfcv/image.hpp
           include/tfcv/utility.hpp
-
 )
 target_include_directories (${PROJECT_NAME}
         PUBLIC

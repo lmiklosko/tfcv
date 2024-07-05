@@ -43,13 +43,16 @@ jobs:
           
           cmake --build build --config Release -j4
           cmake --install build --prefix out
+          
+          cp -r out/sdk/native/jni/include out/include/opencv4
+          cp -r out/sdk/native/libs/${{ matrix.arch }}/* out/lib/.
 
       - name: Upload
         id: upload
         uses: actions/upload-artifact@v4
         with:
           name: Android-${{ matrix.arch }}
-          path: out/**/*
+          path: out/{lib,include}
 
   # iOS build job
   #################
@@ -81,7 +84,8 @@ jobs:
           cmake --build build --config Release -j3
           cmake --install build --prefix out
           
-          # Make sure libtfcv.a contains all its dependencies
+          # Merge everything into a single static library
+          rm -rf out/lib/*
           libtool -static -o out/lib/libtfcv.a $(find build/ -name '*.a')
 
       - name: Upload
@@ -118,7 +122,7 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Multiplatform
+          name: iOS-Multitarget
           path: build/
 
 #  pack-android:
