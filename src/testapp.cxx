@@ -10,14 +10,14 @@ using namespace tfcv;
 
 int main()
 {
-    cv::Mat mat = cv::imread("/home/lukasmiklosko/projects/Dusan/SeedcareONE/syngentaseedcareapp-native/samples/image.JPG");
+    cv::Mat mat = cv::imread("/Users/lukasmiklosko/projects/lukas/tfcv/image.JPG");
 
     try
     {
         tfcv::Image image(std::move(mat));
 
         // ===== Inference =====
-        auto ml = ml::IProcessor::create("/home/lukasmiklosko/projects/Dusan/SeedcareONE/syngentaseedcareapp-native/160.tflite");
+        auto ml = tfcv::ml::IProcessor::create("/Users/lukasmiklosko/projects/lukas/tfcv/160.tflite");
         auto result = ml->run(std::span<const Image>{&image, 1});
 
 

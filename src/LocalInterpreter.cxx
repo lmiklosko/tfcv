@@ -24,6 +24,8 @@ class LocalInterpreter::impl
 
     std::shared_ptr<ILogger> _logger;
 
+    mutable bool tensors_allocated = false;
+
 public:
     explicit impl(std::string_view model_path)
         : _model(tflite::FlatBufferModel::BuildFromFile(model_path.data()))
@@ -79,7 +81,7 @@ public:
 
         return {
             reinterpret_cast<const std::byte*>(_interpreter->output_tensor(0)->data.raw_const),
-            _interpreter->output_tensor(0)->bytes
+            _interpreter->output_tensor(0)->bytes // TODO: Might require less bytes depending on the input
         };
     }
 
@@ -130,6 +132,16 @@ private:
                 throw std::runtime_error("TFInterpreter::impl::copy_data(): Failed to resize input tensor");
             }
 
+            if (kTfLiteOk != _interpreter->AllocateTensors())
+            {
+                _logger->Log(LogLevel::Error, "Failed to allocate tensors");
+                throw std::runtime_error("TFInterpreter::impl::copy_data(): Failed to allocate tensors");
+            }
+
+            tensors_allocated = true;
+        }
+        else if (!tensors_allocated)
+        {
             if (kTfLiteOk != _interpreter->AllocateTensors())
             {
                 _logger->Log(LogLevel::Error, "Failed to allocate tensors");

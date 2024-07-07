@@ -218,6 +218,11 @@ public:
     {
         // TODO: What if our image is already grayscale?
 
+        if (ptr == nullptr)
+        {
+            throw std::invalid_argument("Image::copyTo(): Destination pointer is null");
+        }
+
         auto assign = normalized
                       ? [](void*& ptr, uint8_t pixel) { *((float*)ptr) = static_cast<float>(pixel) / 255.0f; ptr = (float*)ptr + 1; }
                       : [](void*& ptr, uint8_t pixel) { *((uint8_t*)ptr) = pixel; ptr = (uint8_t*)ptr + 1; };

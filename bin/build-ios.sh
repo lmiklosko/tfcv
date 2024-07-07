@@ -15,4 +15,6 @@ cmake --build build.ios.simulator/ --config ${configuration} -j10
 
 # join libraries together
 mkdir -p lib/ios/
-libtool -static -o lib/ios/libtfcv.a build.ios.os/lib/Release/* build.ios.simulator/lib/Release/*
+libtool -static -o lib/ios/libtfcv-ios.a $(find build.ios.os/ -name '*.a')
+libtool -static -o lib/ios/libtfcv-simulator.a $(find build.ios.simulator/ -name '*.a')
+lipo -create lib/ios/libtfcv-ios.a lib/ios/libtfcv-simulator.a -output lib/ios/libtfcv.a
