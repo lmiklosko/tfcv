@@ -1,7 +1,7 @@
 #include "tfcv/ml/processor.hpp"
 #include "tfcv/ml/localinterpreter.hpp"
 
-using namespace ml;
+using namespace tfcv::ml;
 
 
 OVERRIDABLE std::unique_ptr<IProcessor> IProcessor::create(std::string_view model_path)

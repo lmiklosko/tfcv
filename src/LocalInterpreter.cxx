@@ -10,13 +10,11 @@
 #include "tensorflow/lite/delegates/nnapi/nnapi_delegate.h"
 #include "tensorflow/lite/delegates/coreml/coreml_delegate.h"
 
-#include "opencv2/imgproc.hpp"
-
 #include <thread>
 #include <sstream>
-#include <variant>
 
-using namespace ml;
+using namespace tfcv::ml;
+using namespace cxlog;
 
 class LocalInterpreter::impl
 {
@@ -25,6 +23,8 @@ class LocalInterpreter::impl
     std::unique_ptr<TfLiteDelegate, void(*)(TfLiteDelegate*)> _delegate;
 
     std::shared_ptr<ILogger> _logger;
+
+    mutable bool tensors_allocated = false;
 
 public:
     explicit impl(std::string_view model_path)
@@ -74,14 +74,14 @@ public:
             }
         });
 
-        _logger->Log(LogLevel::Info, "Inference time", std::map<std::string, std::string>{
-            std::make_pair("Copy", std::to_string(dur_copy.count())),
-            std::make_pair("Invoke", std::to_string(dur_invoke.count()))
-        });
+        _logger->Log(LogLevel::Info, "Inference time - copy: {}, invoke: {}",
+            dur_copy.count(),
+            dur_invoke.count()
+        );
 
         return {
             reinterpret_cast<const std::byte*>(_interpreter->output_tensor(0)->data.raw_const),
-            _interpreter->output_tensor(0)->bytes
+            _interpreter->output_tensor(0)->bytes // TODO: Might require less bytes depending on the input
         };
     }
 
@@ -112,10 +112,10 @@ private:
         }
 
         // ================= Specs =================
-        _logger->Log(LogLevel::Info, "TF model loaded", std::map<std::string, std::string>{
-                std::make_pair("Input", tf_info(_interpreter->input_tensor(0))),
-                std::make_pair("Output", tf_info(_interpreter->output_tensor(0)))
-        });
+        _logger->Log(LogLevel::Info, "TF model loaded\n\tInput: {}\n\tOutput: {}",
+            tf_info(_interpreter->input_tensor(0)),
+            tf_info(_interpreter->output_tensor(0))
+        );
     }
 
     void copy_data(std::span<const Image> span) const
@@ -123,7 +123,8 @@ private:
         auto [width, height, channels] = std::make_tuple(_interpreter->input_tensor(0)->dims->data[1], _interpreter->input_tensor(0)->dims->data[2], _interpreter->input_tensor(0)->dims->data[3]);
         if (_interpreter->input_tensor(0)->dims->data[0] < (int)span.size())
         {
-            _logger->Logc(LogLevel::Debug, "Resizing input tensor to ", cv::Scalar_<int>((int)span.size(), width, height, channels));
+            _logger->Log(LogLevel::Debug, "Resizing input tensor to [{}, {}, {}, {}]",
+                         (int)span.size(), width, height, channels);
 
             if (kTfLiteOk != _interpreter->ResizeInputTensor(0, { (int)span.size(), width, height, channels }))
             {
@@ -131,6 +132,16 @@ private:
                 throw std::runtime_error("TFInterpreter::impl::copy_data(): Failed to resize input tensor");
             }
 
+            if (kTfLiteOk != _interpreter->AllocateTensors())
+            {
+                _logger->Log(LogLevel::Error, "Failed to allocate tensors");
+                throw std::runtime_error("TFInterpreter::impl::copy_data(): Failed to allocate tensors");
+            }
+
+            tensors_allocated = true;
+        }
+        else if (!tensors_allocated)
+        {
             if (kTfLiteOk != _interpreter->AllocateTensors())
             {
                 _logger->Log(LogLevel::Error, "Failed to allocate tensors");
@@ -208,13 +219,13 @@ private:
         {
             if (auto rv = _interpreter->ModifyGraphWithDelegate(gpuDelegate); rv == kTfLiteOk)
             {
-                _logger->Log(LogLevel::Info, "Using GPU delegate");
+                _logger->LogInfo("Using GPU delegate");
                 _delegate = { gpuDelegate, TfLiteGpuDelegateV2Delete };
                 return;
             }
             else
             {
-                _logger->Logf(LogLevel::Warning, "Failed to use GPU delegate, error code: %d", rv);
+                _logger->LogWarning("Failed to use GPU delegate, error code: {}", rv);
                 TfLiteGpuDelegateV2Delete(gpuDelegate);
             }
         }

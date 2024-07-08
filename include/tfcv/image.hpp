@@ -1,16 +1,29 @@
 #pragma once
 #include "tfcv/defs.hpp"
-#include "opencv2/core.hpp"
 
 #include <filesystem>
 #include <vector>
 #include <span>
 #include <memory>
 
+/* Forward declaration */
+namespace cv { class API Mat; }
+
+TFCV_NAMESPACE_BEGIN
+
 class API Image
 {
 public:
-    Image(cv::Mat&& mat); // NOLINT(*-explicit-constructor)
+    explicit Image(cv::Mat&& mat);
+
+    /**
+     * @brief Construct a new Image object from raw image data
+     * @param data Raw image data
+     * @param width Image width
+     * @param height Image height
+     * @param channels Number of channels
+     */
+    Image(std::span<const std::byte> data, int width, int height, int channels);  // NOLINT(*-explicit-constructor)
 
     /**
      * @brief Construct a new Image object from encoded image data
@@ -25,13 +38,70 @@ public:
     Image(const std::filesystem::path& imagePath); // NOLINT(*-explicit-constructor)
 
     /**
+     * @brief explicit destructor - required for pImpl idiom (some compilers do not allow it to be implicit)
+     *
+     */
+    ~Image();
+
+    /**
+     * Converts the probability image to one-hot encoded image.
+     */
+    void toOneHot();
+
+    /**
+     * Converts the probability image to scce encoded image.
+     */
+    void toSparse();
+
+    /**
+     * Selects the specified area from the image.
+     *
+     * @param mask
+     * @return self
+     */
+    Image& select(const Image& mask);
+
+    /**
      * Crops the image to the specified rectangle.
      *
      * @param rect
      * @return
      */
-    void crop(std::span<const cv::Point2f, 4> rect);
+    Image& crop(std::span<const std::pair<float, float>, 4> rect);
 
+    /**
+     * Crops image to the area of interest specified by channel.
+     *
+     * @details This function will crop the image to the smallest rectangle that contains all non-zero pixels
+     * in the specified channel. The resulting image will have the same dimensions or smaller as the original image.
+     *
+     * @param channel
+     */
+    Image& cropToFit(int channel);
+
+    /**
+     * Adds alpha channel to the image.
+     *
+     * @param mask Mask to use as alpha channel
+     */
+    Image& addAlphaChannel(const Image& mask);
+
+    /**
+     * Extract channel from the image.
+     *
+     * @param channel
+     * @return
+     */
+    [[nodiscard]]
+    Image channel(int channel) const;
+
+    /**
+     * Resizes the image to the specified dimensions.
+     *
+     * @param width
+     * @param height
+     */
+    [[nodiscard]]
     Image resize(int width, int height) const;
 
     /**
@@ -43,7 +113,13 @@ public:
     [[nodiscard]]
     Image depthwiseContour(std::initializer_list<int> ignore_channels = {}) const;
 
-
+    /**
+     * Copies the image data to a buffer.
+     *
+     * @param ptr Buffer to copy to
+     * @param normalized Whether to normalize the data
+     * @param grayscale Whether to convert the image to grayscale
+     */
     void copyTo(void*& ptr, bool normalized, bool grayscale) const;
 
     /**
@@ -55,6 +131,8 @@ public:
     [[nodiscard]]
     std::vector<uint8_t> encode(std::string_view format = ".png") const;
 
+    [[nodiscard]]
+    std::size_t countNonZero() const;
 
     // ~~~~~~~~~~~~~~~~~~~~~~~~ Getters ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -62,6 +140,13 @@ public:
     [[nodiscard]] int height() const;
     [[nodiscard]] int channels() const;
 
+    [[nodiscard]] cv::Mat& underlying_handle();
+
 private:
-    cv::Mat mat;
+    struct impl;
+    std::shared_ptr<impl> pImpl;
+
+    explicit Image(std::shared_ptr<impl> pImpl);
 };
+
+TFCV_NAMESPACE_END

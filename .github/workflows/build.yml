@@ -3,7 +3,9 @@ on:
     branches:
       - master
       - develop
+      - feature/*
       - release/*
+  workflow_dispatch:
 
 env:
   ios-version: 13.0
@@ -13,6 +15,7 @@ jobs:
   ####################
   build-android:
     strategy:
+      fail-fast: false
       matrix:
         arch: ['arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64']
     name: Android ${{ matrix.arch }}
@@ -33,21 +36,25 @@ jobs:
           cmake -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME"/ndk/25.2.9519653/build/cmake/android.toolchain.cmake \
                 -DANDROID_ABI="${{ matrix.arch }}" \
                 -DANDROID_PLATFORM=android-26 \
-                -B"build" \
-                $(test "${{ matrix.arch }}" = "armeabi-v7a" && echo "-DTFLITE_ENABLE_XNNPACK=OFF") \
-                .
+                -S. \
+                -Bbuild \
+                -DBUILD_SHARED_LIBS=ON \
+                $(test "${{ matrix.arch }}" = "armeabi-v7a" && echo "-DTFLITE_ENABLE_XNNPACK=OFF")
           
-          cmake --build build --target tfcv --config Release -j4
+          cmake --build build --config Release -j4
+          cmake --install build --prefix out
           
-          mkdir -p out/lib/android/jniLibs/${{ matrix.arch }}
-          cp build/lib/libtfcv.so out/lib/android/jniLibs/${{ matrix.arch }}
+          cp -r out/sdk/native/jni/include out/include/opencv4
+          cp -r out/sdk/native/libs/${{ matrix.arch }}/* out/lib/.
 
       - name: Upload
         id: upload
         uses: actions/upload-artifact@v4
         with:
-          name: Android-${{ matrix.arch }}-${{ github.run_number }}
-          path: out/lib
+          name: Android-${{ matrix.arch }}
+          path: |
+            out/include
+            out/lib
 
   # iOS build job
   #################
@@ -69,34 +76,38 @@ jobs:
 
       - name: Build
         run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE=./cmake/modules/iOS.cmake -DIOS_PLATFORM=${{ matrix.platform }} -DIOS_DEPLOYMENT_TARGET=${{ env.ios-version }} -H. -Bbuild -GXcode
+          cmake -DCMAKE_TOOLCHAIN_FILE=./cmake/modules/iOS.cmake \
+                -DIOS_PLATFORM=${{ matrix.platform }} \
+                -DIOS_DEPLOYMENT_TARGET=${{ env.ios-version }} \
+                -H. \
+                -Bbuild \
+                -GXcode
+          
           cmake --build build --config Release -j3
+          cmake --install build --prefix out
+          
+          # Merge everything into a single static library
+          rm -rf out/lib/*
+          libtool -static -o out/lib/libtfcv.a $(find build/ -name '*.a')
 
       - name: Upload
         id: upload
         uses: actions/upload-artifact@v4
         with:
           name: iOS-${{ matrix.platform }}
-          path: build/lib/Release/
+          path: out/**/*
 
   # Create artifact from partial builds
   ######################################
   pack:
-    needs: [build-android, build-ios]
+    needs: [build-ios]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
 
-        # Download Android artifacts
-      - uses: actions/download-artifact@v4
-        with:
-          path: build/lib
-          pattern: 'Android-*'
-          merge-multiple: true
-
-        # Download iOS artifacts
+      # Download iOS artifacts
       - uses: actions/download-artifact@v4
         with:
           path: intermediate/lib
@@ -104,15 +115,29 @@ jobs:
 
       - name: Merge iOS Os & Simulator libraries
         run: |
-          mkdir -p build/lib/ios
-          libtool -static -o build/lib/ios/libtfcv.a intermediate/lib/**/*.a
-
-      - run: |
-          cp -r include build/
-          cp -r 3rdparty/opencv/modules/{core,imgproc,imgcodecs,highgui}/include/opencv2/* build/include/opencv2/
+          mkdir -p build/lib/
+          cp -r intermediate/lib/iOS-OS/include build/include
+          for fn in $(ls -a intermediate/lib/iOS-OS/lib | grep "\.a"); do 
+            lipo -create intermediate/lib/iOS-OS/lib/$fn intermediate/lib/iOS-SIMULATOR/lib/$fn -output build/lib/$fn
+          done
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Multiplatform
+          name: iOS-Multitarget
           path: build/
+
+#  pack-android:
+#    needs: [build-android]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          submodules: 'recursive'
+#
+#      # Download Android artifacts
+#      - uses: actions/download-artifact@v4
+#        with:
+#          path: build/lib
+#          pattern: 'Android-*'
+#          merge-multiple: true

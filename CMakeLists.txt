@@ -4,7 +4,7 @@ cmake_policy(SET CMP0065 NEW)
 # Project settings
 # ====================================================
 project (tfcv
-        VERSION 0.1.0
+        VERSION 1.1.3
         DESCRIPTION "Pre-compiled tensorflow lite for computer vision"
         HOMEPAGE_URL "https://github.com/lmiklosko/tfcv"
 )
@@ -22,34 +22,69 @@ set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY true)
 
 list (APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/)
 
+if (BUILD_SHARED_LIBS AND IOS)
+  message(FATAL_ERROR "Cannot build shared library on iOS")
+endif ()
+
+# Get rid of annoying OpenCV warnings
+add_compile_options (
+      $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-enum-enum-conversion>
+      $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-enum-float-conversion>
+      $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>
+      $<$<COMPILE_LANGUAGE:CXX>:-Wno-gnu-inline-cpp-without-extern>
+)
+
 # iOS cannot use shared library since we would need to compile this with certificate and provisioning profile
 # which is not possible in this context. Build as static library instead with all symbols visible (default behavior).
-if (NOT IOS)
-  add_compile_options(
+if (BUILD_SHARED_LIBS)
+  add_compile_options (
           -fPIC
-          -ffunction-sections
-          -fdata-sections
           -fvisibility=hidden
           $<$<COMPILE_LANGUAGE:CXX>:-fvisibility-inlines-hidden>
-          $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-enum-enum-conversion>
-          $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-enum-float-conversion>
-          $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>
-          $<$<COMPILE_LANGUAGE:CXX>:-Wno-gnu-inline-cpp-without-extern>
+          $<$<NOT:$<PLATFORM_ID:Darwin>>:-ffunction-sections>
+          $<$<NOT:$<PLATFORM_ID:Darwin>>:-fdata-sections>
+          $<$<CONFIG:Release>:-O2>
   )
-  add_link_options(
-          -Wl,--gc-sections
-          -Wl,--strip-all
-  )
+  if (APPLE)
+    add_link_options (
+            -Wl,-dead_strip
+    )
+  else ()
+    add_link_options (
+            -Wl,--gc-sections
+            -Wl,--strip-all
+    )
+  endif ()
   set (${PROJECT_NAME}_LIBRARY_TYPE SHARED)
 else()
   set (${PROJECT_NAME}_LIBRARY_TYPE STATIC)
 endif()
 
+macro(target_strip_symbols target)
+  if (NOT IOS AND target_type STREQUAL "SHARED_LIBRARY")
+    add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_STRIP} $<TARGET_FILE:${target}>
+            COMMENT "Stripping symbols from ${target}"
+            )
+  endif ()
+endmacro (target_strip_symbols)
+
 # Dependencies
 # ====================================================
-include (configure-opencv)
+
+# CXLog
 add_subdirectory (3rdparty/cxlog)
+
+# OpenCV
+include (configure-opencv)
 add_subdirectory (3rdparty/opencv)
+target_strip_symbols(opencv_core)
+target_strip_symbols(opencv_imgproc)
+target_strip_symbols(opencv_imgcodecs)
+
+# TensorFlow needs to be built statically
+unset(BUILD_SHARED_LIBS CACHE)
+set(BUILD_SHARED_LIBS OFF)
 add_subdirectory (3rdparty/tensorflow/tensorflow/lite EXCLUDE_FROM_ALL)
 
 # Library definition
@@ -67,10 +102,10 @@ target_sources (${PROJECT_NAME}
         FILES
           include/tfcv/ml/localinterpreter.hpp
           include/tfcv/ml/processor.hpp
+          include/tfcv/ml/classifier.hpp
           include/tfcv/defs.hpp
           include/tfcv/image.hpp
           include/tfcv/utility.hpp
-
 )
 target_include_directories (${PROJECT_NAME}
         PUBLIC
@@ -90,13 +125,21 @@ target_link_libraries (${PROJECT_NAME}
           $<$<BOOL:${ANDROID}>:EGL>
           $<$<BOOL:${ANDROID}>:android>
 )
+target_strip_symbols (${PROJECT_NAME})
+set_target_properties(${PROJECT_NAME}
+      PROPERTIES
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR}
+)
 install (TARGETS ${PROJECT_NAME}
         FILE_SET HEADERS
+        DESTINATION include/${PROJECT_NAME}${PROJECT_VERSION_MAJOR}
+        INCLUDES DESTINATION include/${PROJECT_NAME}${PROJECT_VERSION_MAJOR}
 )
 
-# Configure PODSPEC file
-# ====================================================
-configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/templates/ios.podspec
-        ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.podspec
-)
+
+
+if (BUILD_TESTAPPS)
+  add_executable(testapp src/testapp.cxx)
+  target_link_libraries(testapp ${PROJECT_NAME} opencv_highgui)
+endif (BUILD_TESTAPPS)
