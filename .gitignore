@@ -8,3 +8,6 @@ build.ios.*/
 build.android.*/
 lib/
 install/
+
+3rdparty/tensorflow/tensorflow/lite/CMakelists.txt
+3rdparty/tensorflow/tensorflow/lite/profiling/platform_profiling.cc
