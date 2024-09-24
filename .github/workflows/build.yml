@@ -11,51 +11,6 @@ env:
   ios-version: 13.0
 
 jobs:
-  # Android build job
-  ####################
-  build-android:
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: ['arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64']
-    name: Android ${{ matrix.arch }}
-    runs-on: ubuntu-latest
-    outputs:
-      artifact-id: ${{ steps.upload.outputs.artifact_id }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
-
-      - name: Apply patch
-        run: |
-          cd 3rdparty/tensorflow && git apply ../../fix.patch
-
-      - name: Build
-        run: |
-          cmake -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME"/ndk/25.2.9519653/build/cmake/android.toolchain.cmake \
-                -DANDROID_ABI="${{ matrix.arch }}" \
-                -DANDROID_PLATFORM=android-26 \
-                -S. \
-                -Bbuild \
-                -DBUILD_SHARED_LIBS=ON \
-                $(test "${{ matrix.arch }}" = "armeabi-v7a" && echo "-DTFLITE_ENABLE_XNNPACK=OFF")
-          
-          cmake --build build --config Release -j4
-          cmake --install build --prefix out
-          
-          cp -r out/sdk/native/jni/include out/include/opencv4
-          cp -r out/sdk/native/libs/${{ matrix.arch }}/* out/lib/.
-
-      - name: Upload
-        id: upload
-        uses: actions/upload-artifact@v4
-        with:
-          name: Android-${{ matrix.arch }}
-          path: |
-            out/include
-            out/lib
-
   # iOS build job
   #################
   build-ios:
@@ -158,17 +113,8 @@ jobs:
         run: |
           bin/assembleAndroidPackage.sh
 
-#  pack-android:
-#    needs: [build-android]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#        with:
-#          submodules: 'recursive'
-#
-#      # Download Android artifacts
-#      - uses: actions/download-artifact@v4
-#        with:
-#          path: build/lib
-#          pattern: 'Android-*'
-#          merge-multiple: true
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-Maven
+          path: platform/android/tfcv/build/outputs/aar/tfcv-release.aar
