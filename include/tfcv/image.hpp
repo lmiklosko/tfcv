@@ -140,7 +140,7 @@ public:
     [[nodiscard]] int height() const;
     [[nodiscard]] int channels() const;
 
-    [[nodiscard]] cv::Mat& underlying_handle();
+    [[nodiscard]] cv::Mat& underlying_handle() const;
 
 private:
     struct impl;

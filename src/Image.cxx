@@ -408,7 +408,7 @@ int Image::channels() const
     return pImpl->mat.channels();
 }
 
-cv::Mat& Image::underlying_handle()
+cv::Mat& Image::underlying_handle() const
 {
     return pImpl->mat;
 }

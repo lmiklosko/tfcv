@@ -11,7 +11,7 @@ project (tfcv
 
 option (BUILD_TESTAPPS "Enable test application" OFF)
 option (TFLITE_ENABLE_GPU "" ON)
-option (tfcv_LIBRARY_TYPE "Build library as shared or static" SHARED)
+option (${PROJECT_NAME}_LIBRARY_TYPE "Build library as shared or static" SHARED)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -20,11 +20,6 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_FIND_FRAMEWORK NEVER) # On MacOS, don't use framework for opencv
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY true)
-
-# XNNPACK fails to compile on armeabi-v7a due to some assembly code compilation errors
-if (ANDROID_ABI STREQUAL "armeabi-v7a")
-  set (TFLITE_ENABLE_XNNPACK OFF)
-endif ()
 
 list (APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/)
 
@@ -36,6 +31,11 @@ add_compile_options (
       $<$<COMPILE_LANGUAGE:CXX>:-Wno-gnu-inline-cpp-without-extern>
 )
 
+# XNNPACK fails to compile on armeabi-v7a due to some assembly code compilation errors
+if (ANDROID_ABI STREQUAL "armeabi-v7a")
+  set (TFLITE_ENABLE_XNNPACK OFF)
+endif ()
+
 # For shared libraries, we need to hide symbols by default
 if (BUILD_SHARED_LIBS OR ${PROJECT_NAME}_LIBRARY_TYPE STREQUAL "SHARED")
   # iOS cannot use shared library since we would need to compile this with certificate and provisioning profile
@@ -44,12 +44,14 @@ if (BUILD_SHARED_LIBS OR ${PROJECT_NAME}_LIBRARY_TYPE STREQUAL "SHARED")
     message(FATAL_ERROR "Cannot build shared library on iOS")
   endif ()
 
+  # Shared libraries require Position Independent Code. Also strip objects and enable dead code elimination
   add_compile_options (
           -fPIC
           -fvisibility=hidden
           $<$<COMPILE_LANGUAGE:CXX>:-fvisibility-inlines-hidden>
           $<$<NOT:$<PLATFORM_ID:Darwin>>:-ffunction-sections>
           $<$<NOT:$<PLATFORM_ID:Darwin>>:-fdata-sections>
+          $<$<COMPILE_LANGUAGE:CXX>:-s>
           $<$<CONFIG:Release>:-O2>
   )
 
@@ -77,11 +79,6 @@ add_subdirectory (3rdparty/cxlog)
 # OpenCV
 include (configure-opencv)
 add_subdirectory (3rdparty/opencv)
-
-include (strip)
-target_strip_symbols (opencv_core)
-target_strip_symbols (opencv_imgproc)
-target_strip_symbols (opencv_imgcodecs)
 
 # TensorFlow needs to be built statically
 unset(BUILD_SHARED_LIBS CACHE)
@@ -124,7 +121,6 @@ target_link_libraries (${PROJECT_NAME}
           $<$<BOOL:${ANDROID}>:EGL>
           $<$<BOOL:${ANDROID}>:android>
 )
-target_strip_symbols (${PROJECT_NAME})
 set_target_properties (${PROJECT_NAME}
       PROPERTIES
         VERSION ${PROJECT_VERSION}
@@ -175,6 +171,8 @@ add_library (opencv STATIC
 # Build test applications and helper tools if requested
 # ====================================================
 if (BUILD_TESTAPPS)
-  add_executable(testapp src/testapp.cxx)
-  target_link_libraries(testapp opencv_core opencv_imgproc opencv_imgcodecs)
+  add_executable(testapp
+          src/testapp.cxx
+  )
+  target_link_libraries(testapp tfcv opencv_highgui)
 endif (BUILD_TESTAPPS)

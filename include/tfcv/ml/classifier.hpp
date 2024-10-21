@@ -1,8 +1,8 @@
 #pragma once
-#include "tfcv/defs.hpp"
-#include "tfcv/image.hpp"
-#include "tfcv/utility.hpp"
-#include "tfcv/ml/processor.hpp"
+#include "processor.hpp"
+#include "../defs.hpp"
+#include "../image.hpp"
+#include "../utility.hpp"
 
 #include <vector>
 #include <span>
@@ -13,7 +13,7 @@ TFCV_NAMESPACE_WITH_BEGIN(ml)
 
 class Classifier
 {
-    std::unique_ptr<tfcv::ml::IProcessor> _interpreter;
+    std::unique_ptr<IProcessor> _interpreter;
     int num_classes;
 public:
     /**
@@ -21,7 +21,7 @@ public:
      * @param model_path
      */
     explicit Classifier(std::string_view model_path)
-        : _interpreter(tfcv::ml::IProcessor::create(model_path))
+        : _interpreter(IProcessor::create(model_path))
         , num_classes(_interpreter->output_dims()[1])
     {
     }
@@ -31,7 +31,7 @@ public:
      * @param model_data
      */
     explicit Classifier(std::span<const std::byte> model_data)
-        : _interpreter(tfcv::ml::IProcessor::create(model_data))
+        : _interpreter(IProcessor::create(model_data))
         , num_classes(_interpreter->output_dims()[1])
     {
     }

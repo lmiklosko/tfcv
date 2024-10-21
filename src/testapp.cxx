@@ -1,16 +1,17 @@
-//#include "tfcv/image.hpp"
-//#include "tfcv/ml/processor.hpp"
+#include "tfcv/image.hpp"
+#include "tfcv/ml/processor.hpp"
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-#include <iostream>
 
 
 //using namespace tfcv;
 
 int main()
 {
-    cv::Mat mat = cv::imread("/Users/lukasmiklosko/projects/lukas/tfcv/image.JPG");
+    tfcv::Image image("/Users/lukasmiklosko/projects/lukas/tfcv/image.JPG");
+    cv::imshow("Image", image.underlying_handle());
+    cv::waitKey();
 
 //    try
 //    {
