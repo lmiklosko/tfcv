@@ -64,9 +64,15 @@ if (BUILD_SHARED_LIBS OR ${PROJECT_NAME}_LIBRARY_TYPE STREQUAL "SHARED")
             -Wl,--gc-sections
             -Wl,--strip-all
     )
-  endif ()
+  endif (APPLE)
   set (${PROJECT_NAME}_LIBRARY_TYPE SHARED)
 else()
+  if (NOT IOS)
+    add_compile_options(
+            -fPIC
+            -s
+    )
+  endif ()
   set (${PROJECT_NAME}_LIBRARY_TYPE STATIC)
 endif()
 
@@ -132,41 +138,29 @@ install (TARGETS ${PROJECT_NAME}
         INCLUDES DESTINATION include/${PROJECT_NAME}${PROJECT_VERSION_MAJOR}
 )
 
-# Library definition - Pure OpenCV
-# ====================================================
-include(target_dependencies)
+# For static build gathering obj dependencies is easier than combining all produced .a files with libtool
+# We need to do this as Android prefabs take only single library targets.
+if (${PROJECT_NAME}_LIBRARY_TYPE STREQUAL "STATIC")
+  if (NOT IOS)
+    include(target_dependencies)
+    collect_dependencies(${PROJECT_NAME})
 
-# What we do here is to collect all object files from the dependencies and link them together
-# into a single library. This is necessary on Android, where we need to encapsulate all dependencies
-# into a single library. On other platforms, we can link against the individual libraries.
-# NOTE: This is a workaround as gradle does not pick outputs from custom commands / custom targets
-# which would be the proper way to handle this.
-collect_dependencies(opencv_core)
-list(APPEND opencv_DEPENDENCIES ${opencv_core_DEPENDENCIES})
+    list(APPEND ${PROJECT_NAME}_OBJECT_FILES $<TARGET_OBJECTS:${PROJECT_NAME}>)
+    foreach(dependency IN LISTS ${PROJECT_NAME}_DEPENDENCIES)
+      list(APPEND ${PROJECT_NAME}_OBJECT_FILES $<TARGET_OBJECTS:${dependency}>)
+    endforeach()
 
-collect_dependencies(opencv_imgproc)
-list(APPEND opencv_DEPENDENCIES ${opencv_imgproc_DEPENDENCIES})
+    # For some superb reason carotene dependency is not picked up - probably because its OBJECT lib instead of
+    # STATIC or SHARED one?
+    if (TARGET carotene_objs)
+      message(WARNING "Including carotene_objs")
+      list(APPEND ${PROJECT_NAME}_OBJECT_FILES $<TARGET_OBJECTS:carotene_objs>)
+    endif ()
 
-collect_dependencies(opencv_imgcodecs)
-list(APPEND opencv_DEPENDENCIES ${opencv_imgcodecs_DEPENDENCIES})
-
-foreach(dependency IN LISTS opencv_DEPENDENCIES)
-  list(APPEND opencv-object-files $<TARGET_OBJECTS:${dependency}>)
-endforeach()
-
-if (TARGET carotene_objs)
-  message(WARNING "Including carotene_objs")
-  list(APPEND opencv-object-files $<TARGET_OBJECTS:carotene_objs>)
+    # Create static library
+    add_library (${PROJECT_NAME}_static STATIC ${${PROJECT_NAME}_OBJECT_FILES})
+  endif (NOT IOS)
 endif ()
-
-add_library (opencv STATIC
-        $<TARGET_OBJECTS:opencv_core>
-        $<TARGET_OBJECTS:opencv_imgproc>
-        $<TARGET_OBJECTS:opencv_imgcodecs>
-        ${opencv-object-files}
-)
-
-
 
 # Build test applications and helper tools if requested
 # ====================================================

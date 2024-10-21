@@ -20,8 +20,8 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments("-Dtfcv_LIBRARY_TYPE=SHARED", "-DANDROID_STL=c++_shared", "-DCMAKE_VERBOSE_MAKEFILE=ON")
-                targets("tfcv", "opencv")
+                // arguments("-Dtfcv_LIBRARY_TYPE=SHARED", "-DANDROID_STL=c++_shared", "-DCMAKE_VERBOSE_MAKEFILE=ON")
+                targets("tfcv_static")
             }
         }
     }
@@ -58,17 +58,11 @@ android {
     }
 
     prefab {
-        create("tfcv") {
+        create("tfcv_static") {
             headerOnly = false
             headers = "src/cxx/include/tfcv"
 
-            libraryName = "libtfcv"
-        }
-        create("opencv") {
-            headerOnly = false
-            headers = "src/cxx/include/opencv"
-
-            libraryName = "libopencv"
+            libraryName = "libtfcv_static"
         }
     }
     packaging {
@@ -86,7 +80,7 @@ publishing {
         register<MavenPublication>("release") {
             groupId = "eu.lmiklosko"
             artifactId = "tfcv"
-            version = "1.2.0-alpha"
+            version = "1.3.2-alpha03"
 
             afterEvaluate {
                 from(components["release"])
