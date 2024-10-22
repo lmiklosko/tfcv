@@ -4,7 +4,7 @@ cmake_policy(SET CMP0065 NEW)
 # Project settings
 # ====================================================
 project (tfcv
-        VERSION 1.1.3
+        VERSION 1.3.3
         DESCRIPTION "Pre-compiled tensorflow lite for computer vision"
         HOMEPAGE_URL "https://github.com/lmiklosko/tfcv"
 )

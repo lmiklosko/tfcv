@@ -153,7 +153,7 @@ private:
         for (auto& orig : span)
         {
             orig
-                .resize(512, 512)
+                .resize(width, height)
                 .copyTo(
                     ptr,
                     _interpreter->input_tensor(0)->type == kTfLiteFloat32,

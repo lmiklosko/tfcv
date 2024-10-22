@@ -1,5 +1,6 @@
 #include "tfcv/image.hpp"
 #include "tfcv/ml/processor.hpp"
+#include "tfcv/ml/classifier.hpp"
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
@@ -9,7 +10,14 @@
 
 int main()
 {
-    tfcv::Image image("/Users/lukasmiklosko/projects/lukas/tfcv/image.JPG");
+    tfcv::Image image("/home/lukasmiklosko/projects/Dusan/OptiScout/syngenta-of-pest-detection/samples/cradle_test_image.jpg");
+
+    image = image.resize(32, 32);
+    std::vector<tfcv::Image> vec(96, image);
+
+     tfcv::ml::Classifier classifier("/home/lukasmiklosko/projects/Dusan/OptiScout/syngenta-of-pest-detection/gcp.tflite");
+    auto classes = classifier.classify(vec);
+
     cv::imshow("Image", image.underlying_handle());
     cv::waitKey();
 
