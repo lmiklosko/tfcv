@@ -13,12 +13,6 @@ cmake --build build.ios.os/ --config ${configuration} -j10
 cmake -DCMAKE_TOOLCHAIN_FILE=./cmake/modules/iOS.cmake -DIOS_PLATFORM=SIMULATOR -DIOS_DEPLOYMENT_TARGET=${version} -H. -Bbuild.ios.simulator -GXcode
 cmake --build build.ios.simulator/ --config ${configuration} -j10
 
-#cmake -Bbuild.ios.os -GXcode -DCMAKE_TOOLCHAIN_FILE=./cmake/modules/ios.toolchain.cmake -DPLATFORM=OS64 -DDEPLOYMENT_TARGET=${version}
-#cmake --build build.ios.os/ --config ${configuration} -j10
-#
-#cmake -Bbuild.ios.os -GXcode -DCMAKE_TOOLCHAIN_FILE=./cmake/modules/ios.toolchain.cmake -DPLATFORM=SIMULATOR64 -DDEPLOYMENT_TARGET=${version}
-#cmake --build build.ios.os/ --config ${configuration} -j10
-
 # join libraries together
 mkdir -p lib
 libtool -static -o lib/libtfcv-ios.a $(find build.ios.os/ -name '*.a')
@@ -38,4 +32,4 @@ cp -r include/* $TARGET_DIR/.
 
 cd build.ios
 zip -r release.zip .
-aws s3 cp release.zip s3://syngenta-of-pest-detection/releases/ios/1.3.3.zip
+aws s3 cp release.zip s3://syngenta-of-pest-detection/releases/ios/1.3.4.zip
