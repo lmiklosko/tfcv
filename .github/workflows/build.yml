@@ -41,14 +41,14 @@ jobs:
           cmake --build build --config Release -j3
           cmake --install build --prefix out
           
-          libtool -static -o lib/libtfcv.a $(find build/ -name '*.a')
+          libtool -static -o libtfcv.a $(find build/ -name '*.a')
 
       - name: Upload
         id: upload
         uses: actions/upload-artifact@v4
         with:
           name: iOS-${{ matrix.platform }}
-          path: lib/libtfcv.a
+          path: libtfcv.a
 
   # Create artifact from partial builds
   ######################################
@@ -79,11 +79,17 @@ jobs:
           cp -r 3rdparty/cxlog/include/cxlog $TARGET_DIR/.
           cp -r include/* $TARGET_DIR/.
 
+      - name: Pack
+        run: |
+          cd build.ios
+          zip -r release.zip .
+#          aws s3 cp release.zip s3://syngenta-of-pest-detection/releases/ios/1.3.3.zip
+
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: iOS-Multitarget
-          path: build/
+          path: build.ios/release.zip
 
   createMavenArtifact:
     runs-on: ubuntu-latest
