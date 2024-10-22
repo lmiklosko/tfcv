@@ -2,7 +2,7 @@ on:
   push:
     branches:
       - master
-      - develop
+      - dev
       - feature/*
       - release/*
   workflow_dispatch:
@@ -41,16 +41,14 @@ jobs:
           cmake --build build --config Release -j3
           cmake --install build --prefix out
           
-          # Merge everything into a single static library
-          rm -rf out/lib/*
-          libtool -static -o out/lib/libtfcv.a $(find build/ -name '*.a')
+          libtool -static -o lib/libtfcv.a $(find build/ -name '*.a')
 
       - name: Upload
         id: upload
         uses: actions/upload-artifact@v4
         with:
           name: iOS-${{ matrix.platform }}
-          path: out/**/*
+          path: lib/libtfcv.a
 
   # Create artifact from partial builds
   ######################################
@@ -65,16 +63,21 @@ jobs:
       # Download iOS artifacts
       - uses: actions/download-artifact@v4
         with:
-          path: intermediate/lib
+          path: build.ios/lib
           pattern: 'iOS-*'
 
       - name: Merge iOS Os & Simulator libraries
         run: |
-          mkdir -p build/lib/
-          cp -r intermediate/lib/iOS-OS/include build/include
-          for fn in $(ls -a intermediate/lib/iOS-OS/lib | grep "\.a"); do 
-            lipo -create intermediate/lib/iOS-OS/lib/$fn intermediate/lib/iOS-SIMULATOR/lib/$fn -output build/lib/$fn
-          done
+            lipo -create build.ios/lib/iOS-OS/libtfcv.a build.ios/lib/iOS-SIMULATOR/libtfcv.a -output lib/libtfcv.a
+
+      - name: Include headers
+        run: |
+          TARGET_DIR=build.ios/include
+          cp -r 3rdparty/opencv/modules/core/include/* $TARGET_DIR/
+          cp -r 3rdparty/opencv/modules/imgproc/include/* $TARGET_DIR/
+          cp -r 3rdparty/opencv/modules/imgcodecs/include/* $TARGET_DIR/
+          cp -r 3rdparty/cxlog/include/cxlog $TARGET_DIR/.
+          cp -r include/* $TARGET_DIR/.
 
       - name: Upload
         uses: actions/upload-artifact@v4
