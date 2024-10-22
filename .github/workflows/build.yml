@@ -68,10 +68,12 @@ jobs:
 
       - name: Merge iOS Os & Simulator libraries
         run: |
-            lipo -create build.ios/lib/iOS-OS/libtfcv.a build.ios/lib/iOS-SIMULATOR/libtfcv.a -output lib/libtfcv.a
+            lipo -create build.ios/lib/iOS-OS/libtfcv.a build.ios/lib/iOS-SIMULATOR/libtfcv.a -output build.ios/lib/libtfcv.a
 
       - name: Include headers
         run: |
+          mkdir -p build.ios/include
+          
           TARGET_DIR=build.ios/include
           cp -r 3rdparty/opencv/modules/core/include/* $TARGET_DIR/
           cp -r 3rdparty/opencv/modules/imgproc/include/* $TARGET_DIR/
