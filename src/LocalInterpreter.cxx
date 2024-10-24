@@ -63,6 +63,7 @@ public:
     {
         if (input.empty())
         {
+            _logger->LogError("run(): Input data is empty");
             throw std::invalid_argument("TFInterpreter::impl::run(): Input data is empty");
         }
 
@@ -70,6 +71,7 @@ public:
         auto dur_invoke = utility::measure_time([&]{
             if (kTfLiteOk != _interpreter->Invoke())
             {
+                _logger->LogError("run(): Failed to invoke interpreter");
                 throw std::runtime_error("TFInterpreter::impl::run(): Failed to invoke interpreter");
             }
         });
@@ -89,9 +91,11 @@ private:
     void build_interpreter()
     {
         tflite::LoggerOptions::SetMinimumLogSeverity(tflite::LogSeverity::TFLITE_LOG_SILENT);
+        _logger->LogDebug("Building interpreter");
 
         if (!_model)
         {
+            _logger->LogCritical("Invalid model provided!");
             throw std::runtime_error("TFInterpreter::impl::build_interpreter(): Model could not be found!");
         }
 
@@ -99,6 +103,7 @@ private:
         tflite::InterpreterBuilder(*_model, resolver)(&_interpreter);
         if (!_interpreter)
         {
+            _logger->LogCritical("Failed to build the interpreter");
             throw std::runtime_error("TFInterpreter::impl::build_interpreter(): Failed to build the interpreter");
         }
 
@@ -172,7 +177,10 @@ private:
      */
     void add_delegates()
     {
+        _logger->LogDebug("Setting number of threads to {}", std::thread::hardware_concurrency());
         _interpreter->SetNumThreads((int)std::thread::hardware_concurrency());
+
+        _logger->LogDebug("Adding delegates");
 
         /* Core ML Delegate will run under iOS only (iPhone/iPad) */
 #ifdef __APPLE__
@@ -200,14 +208,14 @@ private:
 #endif
 
         /* Try NNAPI delegate. It should be available beginning api level 26+, however TF recommends min 27 */
-#ifdef __ANDROID__
-        auto nnapiDelegate = tflite::NnApiDelegate();
-        if (_interpreter->ModifyGraphWithDelegate(nnapiDelegate) == kTfLiteOk)
-        {
-            _logger->Log(LogLevel::Info, "Using NNAPI delegate");
-            return;
-        }
-#endif
+//#ifdef __ANDROID__
+//        auto nnapiDelegate = tflite::NnApiDelegate();
+//        if (_interpreter->ModifyGraphWithDelegate(nnapiDelegate) == kTfLiteOk)
+//        {
+//            _logger->Log(LogLevel::Info, "Using NNAPI delegate");
+//            return;
+//        }
+//#endif
 
         /* Every platform supports GPU delegate based on the OpenCL availability (might do nothing) */
         /* NOTE: GPU delegate has an issue with missing dependencies / sources (see https://github.com/tensorflow/tensorflow/issues/61312)
@@ -225,11 +233,13 @@ private:
             }
             else
             {
-                _logger->LogWarning("Failed to use GPU delegate, error code: {}", rv);
+                _logger->LogError("Failed to use GPU delegate, error code: {}", rv);
                 TfLiteGpuDelegateV2Delete(gpuDelegate);
             }
         }
 #endif
+
+        _logger->LogWarning("No delegate available");
     }
 
     static std::string tf_info(TfLiteTensor* tensor) noexcept

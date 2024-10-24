@@ -51,7 +51,6 @@ if (BUILD_SHARED_LIBS OR ${PROJECT_NAME}_LIBRARY_TYPE STREQUAL "SHARED")
           $<$<COMPILE_LANGUAGE:CXX>:-fvisibility-inlines-hidden>
           $<$<NOT:$<PLATFORM_ID:Darwin>>:-ffunction-sections>
           $<$<NOT:$<PLATFORM_ID:Darwin>>:-fdata-sections>
-          $<$<COMPILE_LANGUAGE:CXX>:-s>
           $<$<CONFIG:Release>:-O2>
   )
 
@@ -70,11 +69,13 @@ else()
   if (NOT IOS)
     add_compile_options(
             -fPIC
-            -s
     )
   endif ()
   set (${PROJECT_NAME}_LIBRARY_TYPE STATIC)
 endif()
+
+include(target_dependencies)
+include(strip)
 
 # Dependencies
 # ====================================================
@@ -132,35 +133,28 @@ set_target_properties (${PROJECT_NAME}
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
 )
+target_strip_symbols (${PROJECT_NAME})
 install (TARGETS ${PROJECT_NAME}
         FILE_SET HEADERS
         DESTINATION include/${PROJECT_NAME}${PROJECT_VERSION_MAJOR}
         INCLUDES DESTINATION include/${PROJECT_NAME}${PROJECT_VERSION_MAJOR}
 )
 
-# For static build gathering obj dependencies is easier than combining all produced .a files with libtool
-# We need to do this as Android prefabs take only single library targets.
-if (${PROJECT_NAME}_LIBRARY_TYPE STREQUAL "STATIC")
-  if (NOT IOS)
-    include(target_dependencies)
-    collect_dependencies(${PROJECT_NAME})
+# OpenCV static library
+# ====================================================
+add_library(opencv_c INTERFACE)
+target_link_libraries(opencv_c INTERFACE opencv_core opencv_imgproc opencv_imgcodecs)
+collect_dependencies(opencv_c)
 
-    list(APPEND ${PROJECT_NAME}_OBJECT_FILES $<TARGET_OBJECTS:${PROJECT_NAME}>)
-    foreach(dependency IN LISTS ${PROJECT_NAME}_DEPENDENCIES)
-      list(APPEND ${PROJECT_NAME}_OBJECT_FILES $<TARGET_OBJECTS:${dependency}>)
-    endforeach()
+foreach(dependency IN LISTS opencv_c_DEPENDENCIES)
+  list(APPEND opencv_OBJECT_FILES $<TARGET_OBJECTS:${dependency}>)
+endforeach()
 
-    # For some superb reason carotene dependency is not picked up - probably because its OBJECT lib instead of
-    # STATIC or SHARED one?
-    if (TARGET carotene_objs)
-      message(WARNING "Including carotene_objs")
-      list(APPEND ${PROJECT_NAME}_OBJECT_FILES $<TARGET_OBJECTS:carotene_objs>)
-    endif ()
-
-    # Create static library
-    add_library (${PROJECT_NAME}_static STATIC ${${PROJECT_NAME}_OBJECT_FILES})
-  endif (NOT IOS)
+if (TARGET carotene_objs)
+  list(APPEND opencv_OBJECT_FILES $<TARGET_OBJECTS:carotene_objs>)
 endif ()
+
+add_library (opencv STATIC ${opencv_OBJECT_FILES})
 
 # Build test applications and helper tools if requested
 # ====================================================

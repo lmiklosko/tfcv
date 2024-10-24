@@ -20,8 +20,8 @@ android {
 
         externalNativeBuild {
             cmake {
-                // arguments("-Dtfcv_LIBRARY_TYPE=SHARED", "-DANDROID_STL=c++_shared", "-DCMAKE_VERBOSE_MAKEFILE=ON")
-                targets("tfcv_static")
+                arguments("-Dtfcv_LIBRARY_TYPE=SHARED", "-DANDROID_STL=c++_shared")
+                targets("tfcv", "opencv")
             }
         }
     }
@@ -58,11 +58,16 @@ android {
     }
 
     prefab {
-        create("tfcv_static") {
+        create("tfcv") {
             headerOnly = false
             headers = "src/cxx/include/tfcv"
 
-            libraryName = "libtfcv_static"
+            libraryName = "libtfcv"
+        }
+
+        create("opencv") {
+            headers = "src/cxx/include/tfcv"
+            libraryName = "libopencv"
         }
     }
     packaging {

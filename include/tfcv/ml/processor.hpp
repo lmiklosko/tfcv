@@ -43,7 +43,7 @@ TFCV_NAMESPACE_WITH_BEGIN(ml)
          * @param model_path Path to the model file
          * @return
          */
-        static std::unique_ptr<IProcessor> create(std::string_view model_path) OVERRIDABLE;
+        static std::unique_ptr<IProcessor> create(std::string_view model_path);
 
         /**
          * @brief Construct new ML processor
@@ -51,7 +51,7 @@ TFCV_NAMESPACE_WITH_BEGIN(ml)
          * @param model_data Binary model data
          * @return
          */
-        static std::unique_ptr<IProcessor> create(std::span<const std::byte> model_data) OVERRIDABLE;
+        static std::unique_ptr<IProcessor> create(std::span<const std::byte> model_data);
     };
 
 TFCV_NAMESPACE_END
