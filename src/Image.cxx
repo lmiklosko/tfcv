@@ -16,11 +16,6 @@ public:
             : mat(std::move(image))
     {
         __check(mat);
-
-        if ((mat.type() & CV_MAT_DEPTH_MASK) != CV_8U)
-        {
-            mat.convertTo(mat, CV_8U, 255.0);
-        }
     }
 
     impl(std::span<const std::byte> data, int width, int height, int channels) // NOLINT(*-explicit-constructor)
@@ -134,6 +129,7 @@ public:
         mat = out;
     }
 
+    [[nodiscard]]
     impl channel(int channel) const
     {
         if (channel > mat.channels())
@@ -168,6 +164,7 @@ public:
         mat.setTo(0, mask.mat == 0);
     }
 
+    [[nodiscard]]
     impl depthwiseContour(std::initializer_list<int> ignore_channels) const
     {
         static auto makeMask = [](const cv::Mat& input, cv::Mat& output) -> void
@@ -214,41 +211,48 @@ public:
         }
     }
 
-    void copyTo(void*& ptr, bool normalized, bool grayscale) const
+    void copyTo(void*& optr) const
     {
-        // TODO: What if our image is already grayscale?
-
-        if (ptr == nullptr)
+        if (optr == nullptr)
         {
             throw std::invalid_argument("Image::copyTo(): Destination pointer is null");
         }
 
-        auto assign = normalized
-                      ? [](void*& ptr, uint8_t pixel) { *((float*)ptr) = static_cast<float>(pixel) / 255.0f; ptr = (float*)ptr + 1; }
-                      : [](void*& ptr, uint8_t pixel) { *((uint8_t*)ptr) = pixel; ptr = (uint8_t*)ptr + 1; };
-
-        for (int i = 0; i < mat.rows; ++i)
+        if ((mat.type() & CV_MAT_DEPTH_MASK) == CV_8U)
         {
-            for (int j = 0; j < mat.cols; ++j)
+            for (int i = 0; i < mat.rows; ++i)
             {
-                auto pixel = mat.at<cv::Vec3b>(i, j);
-                if (grayscale)
+                for (int j = 0; j < mat.cols; ++j)
                 {
-                    /* Grayscale - linear approximation */
-                    assign(ptr, static_cast<uint8_t>(
-                            0.114 * (double)pixel[0] +
-                            0.587 * (double)pixel[1] +
-                            0.299 * (double)pixel[2]
-                    ));
-                }
-                else
-                {
+                    auto pixel = mat.ptr<uchar>(i, j);
+
                     /* OpenCV uses BGR format ML needs RGB */
-                    assign(ptr, pixel[2]);
-                    assign(ptr, pixel[1]);
-                    assign(ptr, pixel[0]);
+                    for (int k = mat.channels() - 1; k >= 0; --k)
+                    {
+                        *reinterpret_cast<uchar*&>(optr)++ = pixel[k];
+                    }
                 }
             }
+        }
+        else if ((mat.type() & CV_MAT_DEPTH_MASK) == CV_32F)
+        {
+            for (int i = 0; i < mat.rows; ++i)
+            {
+                for (int j = 0; j < mat.cols; ++j)
+                {
+                    auto pixel = mat.ptr<float>(i, j);
+
+                    /* OpenCV uses BGR format ML needs RGB */
+                    for (int k = mat.channels() - 1; k >= 0; --k)
+                    {
+                        *reinterpret_cast<float*&>(optr)++ = pixel[k];
+                    }
+                }
+            }
+        }
+        else
+        {
+            throw std::invalid_argument("Image::copyTo(): Unsupported data type");
         }
     }
 
@@ -378,9 +382,9 @@ Image Image::depthwiseContour(std::initializer_list<int> ignore_channels) const
     return Image(std::make_shared<impl>(std::move(pImpl->depthwiseContour(ignore_channels))));
 }
 
-void Image::copyTo(void*& ptr, bool normalized, bool grayscale) const
+void Image::copyTo(void*& ptr) const
 {
-    pImpl->copyTo(ptr, normalized, grayscale);
+    pImpl->copyTo(ptr);
 }
 
 std::vector<uint8_t> Image::encode(std::string_view format) const

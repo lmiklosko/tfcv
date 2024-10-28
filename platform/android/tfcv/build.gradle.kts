@@ -85,7 +85,7 @@ publishing {
         register<MavenPublication>("release") {
             groupId = "eu.lmiklosko"
             artifactId = "tfcv"
-            version = "1.3.4"
+            version = "1.4.0"
 
             afterEvaluate {
                 from(components["release"])

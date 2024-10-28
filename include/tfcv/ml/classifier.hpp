@@ -23,6 +23,7 @@ public:
     explicit Classifier(std::string_view model_path)
         : _interpreter(IProcessor::create(model_path))
         , num_classes(_interpreter->output_dims()[1])
+        , pipeline(_interpreter->pipeline)
     {
     }
 
@@ -33,6 +34,7 @@ public:
     explicit Classifier(std::span<const std::byte> model_data)
         : _interpreter(IProcessor::create(model_data))
         , num_classes(_interpreter->output_dims()[1])
+        , pipeline(_interpreter->pipeline)
     {
     }
 
@@ -69,6 +71,8 @@ public:
 
         return out;
     }
+
+    Pipeline& pipeline;
 };
 
 TFCV_NAMESPACE_END

@@ -32,4 +32,4 @@ cp -r include/* $TARGET_DIR/.
 
 cd build.ios
 zip -r release.zip .
-aws s3 cp release.zip s3://syngenta-of-pest-detection/releases/ios/1.3.4.zip
+aws s3 cp release.zip s3://syngenta-of-pest-detection/releases/ios/1.4.0.zip

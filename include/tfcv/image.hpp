@@ -120,7 +120,7 @@ public:
      * @param normalized Whether to normalize the data
      * @param grayscale Whether to convert the image to grayscale
      */
-    void copyTo(void*& ptr, bool normalized, bool grayscale) const;
+    void copyTo(void*& ptr) const;
 
     /**
      * Encodes the image.

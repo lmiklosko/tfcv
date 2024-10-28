@@ -1,6 +1,7 @@
 #pragma once
 #include "tfcv/defs.hpp"
 #include "tfcv/image.hpp"
+#include "tfcv/ml/preprocessing/pipeline.hpp"
 
 #include <span>
 #include <vector>
@@ -52,6 +53,9 @@ TFCV_NAMESPACE_WITH_BEGIN(ml)
          * @return
          */
         static std::unique_ptr<IProcessor> create(std::span<const std::byte> model_data);
+
+
+        Pipeline pipeline;
     };
 
 TFCV_NAMESPACE_END

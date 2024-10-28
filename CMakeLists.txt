@@ -4,7 +4,7 @@ cmake_policy(SET CMP0065 NEW)
 # Project settings
 # ====================================================
 project (tfcv
-        VERSION 1.3.4
+        VERSION 1.4.0
         DESCRIPTION "Pre-compiled tensorflow lite for computer vision"
         HOMEPAGE_URL "https://github.com/lmiklosko/tfcv"
 )
@@ -100,6 +100,7 @@ target_sources (${PROJECT_NAME}
           src/Image.cxx
           src/LocalInterpreter.cxx
           src/Processor.cxx
+          src/Pipeline.cxx
         PUBLIC FILE_SET HEADERS
         BASE_DIRS include/
         FILES
@@ -109,6 +110,9 @@ target_sources (${PROJECT_NAME}
           include/tfcv/defs.hpp
           include/tfcv/image.hpp
           include/tfcv/utility.hpp
+          include/tfcv/ml/preprocessing/pipeline.hpp
+          include/tfcv/ml/preprocessing/op.hpp
+          include/tfcv/ml/preprocessing/ops.hpp
 )
 target_include_directories (${PROJECT_NAME}
         PUBLIC

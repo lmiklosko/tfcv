@@ -59,7 +59,7 @@ public:
         };
     }
 
-    [[nodiscard]] std::span<const std::byte> run(std::span<const Image> input) const
+    [[nodiscard]] std::span<const std::byte> run(std::span<const Image> input, const Pipeline& pipeline) const
     {
         if (input.empty())
         {
@@ -67,7 +67,7 @@ public:
             throw std::invalid_argument("TFInterpreter::impl::run(): Input data is empty");
         }
 
-        auto dur_copy = utility::measure_time([&]{ copy_data(input); });
+        auto dur_copy = utility::measure_time([&]{ copy_data(input, pipeline); });
         auto dur_invoke = utility::measure_time([&]{
             if (kTfLiteOk != _interpreter->Invoke())
             {
@@ -123,7 +123,7 @@ private:
         );
     }
 
-    void copy_data(std::span<const Image> span) const
+    void copy_data(std::span<const Image> span, const Pipeline& pipeline) const
     {
         auto [width, height, channels] = std::make_tuple(_interpreter->input_tensor(0)->dims->data[1], _interpreter->input_tensor(0)->dims->data[2], _interpreter->input_tensor(0)->dims->data[3]);
         if (_interpreter->input_tensor(0)->dims->data[0] < (int)span.size())
@@ -157,13 +157,8 @@ private:
         void *ptr = _interpreter->input_tensor(0)->data.raw;
         for (auto& orig : span)
         {
-            orig
-                .resize(width, height)
-                .copyTo(
-                    ptr,
-                    _interpreter->input_tensor(0)->type == kTfLiteFloat32,
-                    channels != 3
-            );
+            auto mat = pipeline.run(orig);
+            mat.copyTo(ptr);
         }
     }
 
@@ -267,7 +262,7 @@ LocalInterpreter::LocalInterpreter(std::span<const std::byte> model_data)
 
 std::span<const std::byte> LocalInterpreter::run(std::span<const Image> input) const
 {
-    return pImpl->run(input);
+    return pImpl->run(input, this->pipeline);
 }
 
 std::span<int> LocalInterpreter::input_dims() const noexcept
