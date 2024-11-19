@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "tfcv"
-  spec.version      = "1.4.0"
+  spec.version      = "1.4.1"
   spec.summary      = "Pre-compiled tensorflow lite for computer vision"
   spec.description  = "Pre-compiled tensorflow lite for computer vision"
   spec.homepage     = "https://github.com/lmiklosko/tfcv"

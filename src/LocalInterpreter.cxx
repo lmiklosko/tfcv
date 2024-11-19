@@ -51,12 +51,22 @@ public:
         };
     }
 
+    [[nodiscard]] TensorType input_type() const noexcept
+    {
+        return static_cast<TensorType>(_interpreter->input_tensor(0)->type);
+    }
+
     [[nodiscard]] std::span<int> output_dims() const noexcept
     {
         return {
             _interpreter->output_tensor(0)->dims->data,
             static_cast<unsigned long>(_interpreter->output_tensor(0)->dims->size)
         };
+    }
+
+    [[nodiscard]] TensorType output_type() const noexcept
+    {
+        return static_cast<TensorType>(_interpreter->output_tensor(0)->type);
     }
 
     [[nodiscard]] std::span<const std::byte> run(std::span<const Image> input, const Pipeline& pipeline) const
@@ -270,9 +280,19 @@ std::span<int> LocalInterpreter::input_dims() const noexcept
     return pImpl->input_dims();
 }
 
+TensorType LocalInterpreter::input_type() const noexcept
+{
+    return pImpl->input_type();
+}
+
 std::span<int> LocalInterpreter::output_dims() const noexcept
 {
     return pImpl->output_dims();
+}
+
+TensorType LocalInterpreter::output_type() const noexcept
+{
+    return pImpl->output_type();
 }
 
 LocalInterpreter::~LocalInterpreter() = default;

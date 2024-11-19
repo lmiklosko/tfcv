@@ -38,11 +38,23 @@ TFCV_NAMESPACE_WITH_BEGIN(ml)
         std::span<int> input_dims() const noexcept override;
 
         /**
+         * @brief Queries the type of input tensor
+         */
+        [[nodiscard]]
+        TensorType input_type() const noexcept override;
+
+        /**
          * @brief Get the output dimensions
          * @return Output dimensions
          */
         [[nodiscard]]
         std::span<int> output_dims() const noexcept override;
+
+        /**
+         * @brief Queries the type of output tensor
+         */
+        [[nodiscard]]
+        TensorType output_type() const noexcept override;
 
 
         ~LocalInterpreter() override;

@@ -7,7 +7,32 @@
 #include <vector>
 #include <cstdint>
 
+namespace cv { class Mat; }
+
 TFCV_NAMESPACE_WITH_BEGIN(ml)
+
+    enum class TensorType
+    {
+        INVALID = 0,
+        FLOAT32,
+        INT32,
+        UINT8,
+        INT64,
+        STRING,
+        BOOL,
+        INT16,
+        COMPLEX64,
+        INT8,
+        FLOAT16,
+        FLOAT64,
+        COMPLEX128,
+        UINT64,
+        RESOURCE,
+        VARIANT,
+        UINT32,
+        UINT16,
+        INT4
+    };
 
     class API IProcessor
     {
@@ -31,12 +56,16 @@ TFCV_NAMESPACE_WITH_BEGIN(ml)
          */
         [[nodiscard]] virtual std::span<int> input_dims() const noexcept = 0;
 
+        [[nodiscard]] virtual TensorType input_type() const noexcept = 0;
+
         /**
          * @brief Get the output dimensions
          *
          * @return Output dimensions
          */
         [[nodiscard]] virtual std::span<int> output_dims() const noexcept = 0;
+
+        [[nodiscard]] virtual TensorType output_type() const noexcept = 0;
 
         /**
          * @brief Construct new ML processor

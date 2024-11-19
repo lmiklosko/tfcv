@@ -46,26 +46,36 @@ public:
      * @return Classes for every image in the set
      */
     [[nodiscard]]
-    std::vector<uint8_t> classify(std::span<tfcv::Image> images) const
+    std::vector<uint8_t> classify(std::span<tfcv::Image> images, size_t batch = 64) const
     {
         if (images.empty())
         {
             return {};
         }
 
-        auto splits = tfcv::utility::split(images, 64);
+        auto splits = tfcv::utility::split(images, batch);
 
         std::vector<uint8_t> out;
         for (const auto& it : splits)
         {
-            auto output = reinterpret_cast<const uint8_t*>(_interpreter->run(it).data());
-
-            for (int i = 0; i < it.size(); ++i)
+            auto data = _interpreter->run(it);
+            if (_interpreter->output_type() == TensorType::FLOAT32)
             {
-                auto maxIndex = std::max_element(output, output + num_classes) - output;
-                out.emplace_back(static_cast<uint8_t>(maxIndex));
-
-                output += num_classes;
+                auto output = reinterpret_cast<const float*>(data.data());
+                for (int i = 0; i < it.size(); ++i)
+                {
+                    out.emplace_back(argmax(output, num_classes));
+                    output += num_classes;
+                }
+            }
+            else if (_interpreter->output_type() == TensorType::UINT8)
+            {
+                auto output = reinterpret_cast<const uint8_t*>(data.data());
+                for (int i = 0; i < it.size(); ++i)
+                {
+                    out.emplace_back(argmax(output, num_classes));
+                    output += num_classes;
+                }
             }
         }
 
@@ -73,6 +83,15 @@ public:
     }
 
     Pipeline& pipeline;
+
+private:
+    template<typename T>
+    [[nodiscard]] uint8_t argmax(const T* data, int size) const
+    {
+        return std::max_element(data, data + size) - data;
+    }
+
+
 };
 
 TFCV_NAMESPACE_END
